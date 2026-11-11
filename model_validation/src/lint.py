@@ -27,20 +27,25 @@ from pathlib import Path
 
 from lint_app import LocalModules, lint_app, lint_containers, lint_downloads, lint_revisions
 from lint_base import ERROR, RULES, Finding, SpaceFiles
-from lint_requirements import (find_python_file, find_uv, read_dockerfile, read_requirements,
-                               requirement_findings)
-from results import ModelResult, PASS
+from lint_requirements import (
+    find_python_file,
+    find_uv,
+    read_dockerfile,
+    read_requirements,
+    requirement_findings,
+)
+from results import PASS, ModelResult
 from utils import describe_exception
 
 
 __all__ = [
-    'ERROR',
-    'find_uv',
-    'lint_files',
-    'apply_exceptions',
-    'check_lint_exceptions',
-    'fetch_space',
-    'lint_space'
+    "ERROR",
+    "find_uv",
+    "lint_files",
+    "apply_exceptions",
+    "check_lint_exceptions",
+    "fetch_space",
+    "lint_space",
 ]
 
 
@@ -64,10 +69,16 @@ def lint_files(space: SpaceFiles, uv: str | None = None) -> list:
         findings.append(Finding("app-file", f"no app file ({space.app_file}) to check"))
         imports_spaces = False
     else:
-        findings += lint_app(app, space.app_file, LocalModules(space.files), space.zerogpu,
-                             gradio_sdk=space.sdk != "docker")
-        imports_spaces = bool(re.search(r"^\s*(import spaces|from spaces import)", app,
-                                        re.MULTILINE))
+        findings += lint_app(
+            app,
+            space.app_file,
+            LocalModules(space.files),
+            space.zerogpu,
+            gradio_sdk=space.sdk != "docker",
+        )
+        imports_spaces = bool(
+            re.search(r"^\s*(import spaces|from spaces import)", app, re.MULTILINE)
+        )
 
     for name, text in space.files.items():
         if name.endswith(".py") and "/" not in name:
@@ -108,8 +119,12 @@ def apply_exceptions(findings: list, exceptions: dict | None) -> list:
     fired = {finding.rule for finding in findings}
 
     for rule in sorted(set(exceptions) - fired):
-        kept.append(Finding("stale-exception", f"lint_exceptions excuses '{rule}', which no "
-                                               f"longer applies. Remove the exception"))
+        kept.append(
+            Finding(
+                "stale-exception",
+                f"lint_exceptions excuses '{rule}', which no longer applies. Remove the exception",
+            )
+        )
 
     return kept
 
@@ -130,15 +145,20 @@ def check_lint_exceptions(config: dict) -> None:
         if exceptions is None:
             continue
         if not isinstance(exceptions, dict):
-            raise ValueError(f"lint_exceptions for '{model}' must map each rule to the "
-                             f"reason it is excused")
+            raise ValueError(
+                f"lint_exceptions for '{model}' must map each rule to the reason it is excused"
+            )
         for rule, reason in exceptions.items():
             if rule not in RULES or rule == "stale-exception":
-                raise ValueError(f"lint_exceptions for '{model}' names unknown rule "
-                                 f"'{rule}'. Rules: {sorted(set(RULES) - {'stale-exception'})}")
+                raise ValueError(
+                    f"lint_exceptions for '{model}' names unknown rule "
+                    f"'{rule}'. Rules: {sorted(set(RULES) - {'stale-exception'})}"
+                )
             if not (isinstance(reason, str) and reason.strip()):
-                raise ValueError(f"lint_exceptions for '{model}' excuses '{rule}' without "
-                                 f"a reason. Say why the rule does not apply")
+                raise ValueError(
+                    f"lint_exceptions for '{model}' excuses '{rule}' without "
+                    f"a reason. Say why the rule does not apply"
+                )
 
 
 def lint_space(api, space_id: str, overrides: dict, uv: str | None):
@@ -204,14 +224,18 @@ def fetch_space(api, space_id: str) -> SpaceFiles:
         sdk=str(get("sdk") or info.sdk or "gradio"),
         sdk_version=str(get("sdk_version") or ""),
         python_version=str(get("python_version") or ""),
-        hardware=(getattr(runtime, "requested_hardware", None)
-                  or getattr(runtime, "hardware", None) or "") if runtime else "",
+        hardware=(
+            getattr(runtime, "requested_hardware", None) or getattr(runtime, "hardware", None) or ""
+        )
+        if runtime
+        else "",
         listing=[sibling.rfilename for sibling in info.siblings or []],
     )
 
     def read(name):
-        path = hf_hub_download(space_id, name, repo_type="space", revision=info.sha,
-                               token=api.token)
+        path = hf_hub_download(
+            space_id, name, repo_type="space", revision=info.sha, token=api.token
+        )
         return Path(path).read_text(encoding="utf-8", errors="replace")
 
     for name in READ_FILES:
@@ -225,8 +249,14 @@ def fetch_space(api, space_id: str) -> SpaceFiles:
                 space.files[name] = read(name)
         # The CMD names the app, or a script that starts it
         app = find_python_file(build.command)
-        script = next((word.strip('"[],') for word in build.command.split()
-                       if word.strip('"[],').endswith(".sh")), "")
+        script = next(
+            (
+                word.strip('"[],')
+                for word in build.command.split()
+                if word.strip('"[],').endswith(".sh")
+            ),
+            "",
+        )
         if not app and Path(script).name in space.listing:
             app = find_python_file(read(Path(script).name))
         space.app_file = app if app in space.listing else "app.py"

@@ -15,12 +15,7 @@ from audio import read_audio_props
 from midi import read_midi_props
 
 
-__all__ = [
-    'EXPECT_RULES',
-    'FILE_TYPES',
-    'resolve_expect_targets',
-    'check_expectations'
-]
+__all__ = ["EXPECT_RULES", "FILE_TYPES", "resolve_expect_targets", "check_expectations"]
 
 
 # Component types that carry a file on disk
@@ -59,8 +54,7 @@ EXPECT_RULES = {
 # The note_* rules, mapped to the decoded property each reads. Both name the
 # notes rather than the file, since a MIDI file carries no single instrument
 # or channel of its own, only notes that each use one.
-NOTE_VALUE_RULES = {"note_instruments": "instruments",
-                    "note_channels": "channels"}
+NOTE_VALUE_RULES = {"note_instruments": "instruments", "note_channels": "channels"}
 
 # The text rules, which read a string output rather than a file
 TEXT_RULES = {"min_length", "excludes"}
@@ -69,8 +63,15 @@ TEXT_RULES = {"min_length", "excludes"}
 # from whichever of audio/MIDI props matches the type of the output.
 DURATION_RULES = {"min_duration", "max_duration"}
 DECODED_RULES = {
-    "audio_track": {"num_channels", "sample_rate", "bit_depth",
-                    "min_rms_db", "max_rms_db", "max_clipping"} | DURATION_RULES,
+    "audio_track": {
+        "num_channels",
+        "sample_rate",
+        "bit_depth",
+        "min_rms_db",
+        "max_rms_db",
+        "max_clipping",
+    }
+    | DURATION_RULES,
     "midi_track": {"min_notes"} | set(NOTE_VALUE_RULES) | DURATION_RULES,
 }
 
@@ -118,8 +119,7 @@ def read_text(label: str, path: str) -> str:
         with open(path, encoding="utf-8") as stream:
             return stream.read()
     except (OSError, UnicodeDecodeError) as exc:
-        raise AssertionError(
-            f"output '{label}' could not be read as text: {exc}") from exc
+        raise AssertionError(f"output '{label}' could not be read as text: {exc}") from exc
 
 
 def resolve_expect_targets(expect: dict, out_types: dict) -> list:
@@ -156,8 +156,10 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
 
         unknown = set(rules) - set(EXPECT_RULES)
         if unknown:
-            raise ValueError(f"unknown expect rule(s) {sorted(unknown)} for "
-                             f"'{key}'. Supported rules: {sorted(EXPECT_RULES)}")
+            raise ValueError(
+                f"unknown expect rule(s) {sorted(unknown)} for "
+                f"'{key}'. Supported rules: {sorted(EXPECT_RULES)}"
+            )
 
         if key == ALL_OUTPUTS:
             # Fan each rule out to the outputs whose type it covers. A rule
@@ -170,8 +172,9 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
             continue
 
         if key not in out_types:
-            raise ValueError(f"expect references unknown output '{key}' "
-                             f"(available: {list(out_types)})")
+            raise ValueError(
+                f"expect references unknown output '{key}' (available: {list(out_types)})"
+            )
 
         for rule in rules:
             applicable = EXPECT_RULES[rule]
@@ -179,7 +182,8 @@ def resolve_expect_targets(expect: dict, out_types: dict) -> list:
                 raise ValueError(
                     f"expect rule '{rule}' does not apply to output '{key}' "
                     f"of type '{out_types[key]}'. It applies to "
-                    f"{sorted(applicable)} outputs")
+                    f"{sorted(applicable)} outputs"
+                )
 
         named[key] = rules
 
@@ -214,9 +218,9 @@ def check_note_values(label: str, rule: str, found: list, allowed) -> None:
     allowed = [allowed] if isinstance(allowed, int) else list(allowed)
     unexpected = sorted(set(found) - set(allowed))
 
-    assert not unexpected, \
-        (f"output '{label}' has notes using {noun} {unexpected}, expected "
-         f"only {sorted(allowed)}")
+    assert not unexpected, (
+        f"output '{label}' has notes using {noun} {unexpected}, expected only {sorted(allowed)}"
+    )
 
 
 def check_duration(label: str, duration, rules: dict) -> None:
@@ -236,18 +240,17 @@ def check_duration(label: str, duration, rules: dict) -> None:
     if not (set(rules) & DURATION_RULES):
         return
 
-    assert duration is not None, \
-        f"output '{label}': could not determine its duration"
+    assert duration is not None, f"output '{label}': could not determine its duration"
 
     if "min_duration" in rules:
-        assert duration >= rules["min_duration"], \
-            (f"output '{label}' is {duration:.2f}s, expected at least "
-             f"{rules['min_duration']}s")
+        assert duration >= rules["min_duration"], (
+            f"output '{label}' is {duration:.2f}s, expected at least {rules['min_duration']}s"
+        )
 
     if "max_duration" in rules:
-        assert duration <= rules["max_duration"], \
-            (f"output '{label}' is {duration:.2f}s, expected at most "
-             f"{rules['max_duration']}s")
+        assert duration <= rules["max_duration"], (
+            f"output '{label}' is {duration:.2f}s, expected at most {rules['max_duration']}s"
+        )
 
 
 def check_expectations(label: str, otype: str, value, rules: dict) -> None:
@@ -272,14 +275,15 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
     if "ext" in rules:
         allowed = rules["ext"]
         allowed = [allowed] if isinstance(allowed, str) else list(allowed)
-        assert isinstance(value, str) and \
-            any(value.lower().endswith(e.lower()) for e in allowed), \
+        assert isinstance(value, str) and any(value.lower().endswith(e.lower()) for e in allowed), (
             f"output '{label}' is not a {' or '.join(allowed)} file: {value}"
+        )
 
     if "min_bytes" in rules:
         size = os.path.getsize(require_file(label, value))
-        assert size >= rules["min_bytes"], \
+        assert size >= rules["min_bytes"], (
             f"output file '{label}' is {size} bytes, expected at least {rules['min_bytes']}"
+        )
 
     # --- Decoded audio/MIDI properties ---------------------------------------
     # Decode once, and only when a rule needs the decoded properties
@@ -290,44 +294,52 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
 
     if props is not None and otype == "audio_track":
         if "num_channels" in rules:
-            assert props["num_channels"] == rules["num_channels"], \
-                (f"output '{label}': expected {rules['num_channels']} "
-                 f"channel(s), got {props['num_channels']}")
+            assert props["num_channels"] == rules["num_channels"], (
+                f"output '{label}': expected {rules['num_channels']} "
+                f"channel(s), got {props['num_channels']}"
+            )
 
         if "sample_rate" in rules:
-            assert props["sample_rate"] == rules["sample_rate"], \
-                (f"output '{label}': expected {rules['sample_rate']} Hz, "
-                 f"got {props['sample_rate']} Hz")
+            assert props["sample_rate"] == rules["sample_rate"], (
+                f"output '{label}': expected {rules['sample_rate']} Hz, "
+                f"got {props['sample_rate']} Hz"
+            )
 
         if "bit_depth" in rules:
-            assert props["bit_depth"] is not None, \
-                (f"output '{label}' is a compressed format ({props['subtype']}) "
-                 f"with no PCM bit depth to check")
-            assert props["bit_depth"] == rules["bit_depth"], \
-                (f"output '{label}': expected {rules['bit_depth']}-bit audio, "
-                 f"got {props['bit_depth']}-bit ({props['subtype']})")
+            assert props["bit_depth"] is not None, (
+                f"output '{label}' is a compressed format ({props['subtype']}) "
+                f"with no PCM bit depth to check"
+            )
+            assert props["bit_depth"] == rules["bit_depth"], (
+                f"output '{label}': expected {rules['bit_depth']}-bit audio, "
+                f"got {props['bit_depth']}-bit ({props['subtype']})"
+            )
 
         if "min_rms_db" in rules:
-            assert props["rms_db"] >= rules["min_rms_db"], \
-                (f"output '{label}' appears silent (RMS {props['rms_db']:.1f} dBFS "
-                 f"< {rules['min_rms_db']} dBFS)")
+            assert props["rms_db"] >= rules["min_rms_db"], (
+                f"output '{label}' appears silent (RMS {props['rms_db']:.1f} dBFS "
+                f"< {rules['min_rms_db']} dBFS)"
+            )
 
         if "max_rms_db" in rules:
-            assert props["rms_db"] <= rules["max_rms_db"], \
-                (f"output '{label}' carries more signal than expected (RMS "
-                 f"{props['rms_db']:.1f} dBFS > {rules['max_rms_db']} dBFS)")
+            assert props["rms_db"] <= rules["max_rms_db"], (
+                f"output '{label}' carries more signal than expected (RMS "
+                f"{props['rms_db']:.1f} dBFS > {rules['max_rms_db']} dBFS)"
+            )
 
         if "max_clipping" in rules:
-            assert props["clipping"] <= rules["max_clipping"], \
-                (f"output '{label}' clips: {props['clipping']:.3%} of its samples sit "
-                 f"in flat tops at full scale, more than the "
-                 f"{rules['max_clipping']:.3%} allowed")
+            assert props["clipping"] <= rules["max_clipping"], (
+                f"output '{label}' clips: {props['clipping']:.3%} of its samples sit "
+                f"in flat tops at full scale, more than the "
+                f"{rules['max_clipping']:.3%} allowed"
+            )
 
     if props is not None and otype == "midi_track":
         if "min_notes" in rules:
-            assert props["num_notes"] >= rules["min_notes"], \
-                (f"output '{label}' has {props['num_notes']} note(s), expected "
-                 f"at least {rules['min_notes']}")
+            assert props["num_notes"] >= rules["min_notes"], (
+                f"output '{label}' has {props['num_notes']} note(s), expected "
+                f"at least {rules['min_notes']}"
+            )
 
         for rule, prop in NOTE_VALUE_RULES.items():
             if rule in rules:
@@ -342,23 +354,26 @@ def check_expectations(label: str, otype: str, value, rules: dict) -> None:
 
         if "min_length" in rules:
             length = len(text.strip())
-            assert length >= rules["min_length"], \
-                (f"output '{label}' holds {length} character(s) of text, "
-                 f"expected at least {rules['min_length']}")
+            assert length >= rules["min_length"], (
+                f"output '{label}' holds {length} character(s) of text, "
+                f"expected at least {rules['min_length']}"
+            )
 
         if "excludes" in rules:
             excluded = rules["excludes"]
             excluded = [excluded] if isinstance(excluded, str) else list(excluded)
             found = [bad for bad in excluded if bad.lower() in text.lower()]
-            assert not found, \
-                (f"output '{label}' contains {found}, which the model returns "
-                 f"in place of a result: {text.strip()[:100]!r}")
+            assert not found, (
+                f"output '{label}' contains {found}, which the model returns "
+                f"in place of a result: {text.strip()[:100]!r}"
+            )
 
     # --- JSON / LabelList outputs --------------------------------------------
     if "min_labels" in rules:
         labels = value.get("labels") if isinstance(value, dict) else None
-        assert isinstance(labels, list), \
+        assert isinstance(labels, list), (
             f"output '{label}' does not contain a pyharp LabelList: {value}"
-        assert len(labels) >= rules["min_labels"], \
-            (f"output '{label}' has {len(labels)} label(s), expected at least "
-             f"{rules['min_labels']}")
+        )
+        assert len(labels) >= rules["min_labels"], (
+            f"output '{label}' has {len(labels)} label(s), expected at least {rules['min_labels']}"
+        )

@@ -10,11 +10,7 @@ the run itself.
 import threading
 
 
-__all__ = [
-    'ZeroGPUTracker',
-    'is_zerogpu',
-    'spends_zerogpu'
-]
+__all__ = ["ZeroGPUTracker", "is_zerogpu", "spends_zerogpu"]
 
 
 def is_zerogpu(hardware: str) -> bool:
@@ -106,5 +102,4 @@ class ZeroGPUTracker:
         with self._lock:
             calls, wall = self.calls, int(self.wall_seconds)
 
-        return (f"ZeroGPU: {calls} call{'s' if calls != 1 else ''}, "
-                f"~{wall}s wall (approx)")
+        return f"ZeroGPU: {calls} call{'s' if calls != 1 else ''}, ~{wall}s wall (approx)"

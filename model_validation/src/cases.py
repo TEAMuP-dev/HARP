@@ -15,27 +15,29 @@ from gradio_client import handle_file
 
 from assets import Assets, input_kind
 from audio import read_audio_props
-from expectations import FILE_TYPES, resolve_expect_targets, check_expectations
+from expectations import FILE_TYPES, check_expectations, resolve_expect_targets
 from midi import read_midi_props
 from validators import VALIDATORS, ValidatorNotApplicable
 
 
 __all__ = [
-    'synthesize_default_args',
-    'apply_case',
-    'fed_kinds',
-    'generated_text',
-    'validate_outputs',
-    'inspect_outputs',
-    'measure_outputs'
+    "synthesize_default_args",
+    "apply_case",
+    "fed_kinds",
+    "generated_text",
+    "validate_outputs",
+    "inspect_outputs",
+    "measure_outputs",
 ]
 
 
 # The text a control asking for {text_length: N} is filled from, repeated and
 # cut to N characters. It is the sentence the speech asset reads.
-TEXT_FILLER = ("Every morning, the small bakery on the corner opens at seven. The smell "
-               "of fresh bread drifts down the street, and a short line forms outside "
-               "the door. ")
+TEXT_FILLER = (
+    "Every morning, the small bakery on the corner opens at seven. The smell "
+    "of fresh bread drifts down the street, and a short line forms outside "
+    "the door. "
+)
 
 
 def generated_text(length: int) -> str:
@@ -65,12 +67,14 @@ def fed_kinds(controls: dict) -> set:
         kinds (set): Any of "audio" and "midi".
     """
 
-    return {kind for spec in controls.get("inputs", [])
-            if spec.get("required", True) and (kind := input_kind(spec))}
+    return {
+        kind
+        for spec in controls.get("inputs", [])
+        if spec.get("required", True) and (kind := input_kind(spec))
+    }
 
 
-def synthesize_default_args(controls: dict, assets: Assets,
-                            synth: dict | None = None) -> tuple:
+def synthesize_default_args(controls: dict, assets: Assets, synth: dict | None = None) -> tuple:
     """
     Build the positional argument list for /process from the /controls spec.
 
@@ -107,9 +111,11 @@ def synthesize_default_args(controls: dict, assets: Assets,
             else:
                 path = assets.for_file_types(spec.get("file_types"), synth)
             if path is None:
-                missing[label] = (f"cannot synthesize a {ctype} input for "
-                                  f"file_types={spec.get('file_types')}. Supply "
-                                  f"one via a test case's `files` entry")
+                missing[label] = (
+                    f"cannot synthesize a {ctype} input for "
+                    f"file_types={spec.get('file_types')}. Supply "
+                    f"one via a test case's `files` entry"
+                )
             args.append(handle_file(str(path)) if path is not None else None)
         elif ctype in ("slider", "number_box"):
             # A number box can declare neither a default nor a minimum (both
@@ -135,7 +141,9 @@ def synthesize_default_args(controls: dict, assets: Assets,
                 else:
                     # Choices arrive as [label, value] pairs or plain values
                     first = choices[0]
-                    value = first[1] if isinstance(first, (list, tuple)) and len(first) > 1 else first
+                    value = (
+                        first[1] if isinstance(first, (list, tuple)) and len(first) > 1 else first
+                    )
             args.append(value)
         else:
             missing[label] = f"unsupported input control type '{ctype}'"
@@ -172,12 +180,16 @@ def apply_case(args: list, controls: dict, case: dict, config_dir: Path) -> list
     def index_of(label: str) -> int:
         """Locate an input by label, rejecting unknown or ambiguous names."""
         if label not in labels:
-            raise ValueError(f"test case '{case.get('name')}' references unknown "
-                             f"input '{label}' (available: {labels})")
+            raise ValueError(
+                f"test case '{case.get('name')}' references unknown "
+                f"input '{label}' (available: {labels})"
+            )
         if labels.count(label) > 1:
-            raise ValueError(f"test case '{case.get('name')}' references '{label}', "
-                             f"but the model has {labels.count(label)} inputs with "
-                             f"that label, so overriding it is ambiguous")
+            raise ValueError(
+                f"test case '{case.get('name')}' references '{label}', "
+                f"but the model has {labels.count(label)} inputs with "
+                f"that label, so overriding it is ambiguous"
+            )
         return labels.index(label)
 
     for label, value in (case.get("controls") or {}).items():
@@ -244,10 +256,8 @@ def validate_outputs(result, controls: dict) -> str | None:
             if out is None:
                 continue
             if not isinstance(out, (dict, list)):
-                return (f"JSON output '{spec.get('label')}' is not valid JSON "
-                        f"data: {str(out)[:100]}")
-            if isinstance(out, dict) and "labels" in out and \
-                    not isinstance(out["labels"], list):
+                return f"JSON output '{spec.get('label')}' is not valid JSON data: {str(out)[:100]}"
+            if isinstance(out, dict) and "labels" in out and not isinstance(out["labels"], list):
                 return f"label list output '{spec.get('label')}' is malformed"
             continue
 
@@ -258,8 +268,7 @@ def validate_outputs(result, controls: dict) -> str | None:
         # path that is not a file on disk means the output never arrived
         path = out.get("path") if isinstance(out, dict) and "path" in out else out
         if not isinstance(path, (str, os.PathLike)):
-            return (f"output '{spec.get('label')}' is not a file path: "
-                    f"{str(out)[:100]}")
+            return f"output '{spec.get('label')}' is not a file path: {str(out)[:100]}"
         if not os.path.isfile(path):
             return f"output file for '{spec.get('label')}' does not exist: {path}"
         if os.path.getsize(path) == 0:
@@ -370,9 +379,11 @@ def inspect_outputs(result, controls: dict, case: dict) -> None:
 
     for name, params in (case.get("validators") or {}).items():
         if name not in VALIDATORS:
-            raise ValueError(f"unknown validator '{name}' (available: "
-                             f"{sorted(VALIDATORS)}). Register it in "
-                             f"validators.py")
+            raise ValueError(
+                f"unknown validator '{name}' (available: "
+                f"{sorted(VALIDATORS)}). Register it in "
+                f"validators.py"
+            )
         try:
             VALIDATORS[name](out_map, controls, params or {})
         except ValidatorNotApplicable:

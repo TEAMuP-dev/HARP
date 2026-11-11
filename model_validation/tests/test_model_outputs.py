@@ -9,16 +9,18 @@ a validator can be checked without spending a model run on it:
 """
 
 import json
-from pathlib import Path
 import sys
 import tempfile
 import unittest
+from pathlib import Path
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import soundfile
-from expectations import check_expectations, resolve_expect_targets
+
 from assets import check_synthesized_inputs
+from expectations import check_expectations, resolve_expect_targets
 from harness import merge_common_cases
 from utils import check_config_keys, load_config
 from validators import VALIDATORS, ValidatorNotApplicable
@@ -63,61 +65,55 @@ class MeritScoresTest(ValidatorTest):
     def test_rejects_values_that_are_not_similarities(self):
         for value in (None, True, "0.9", float("nan"), 2.0, -2.0):
             with self.subTest(value=value), self.assertRaises(AssertionError):
-                self.check_file("merit_scores", self.LABEL,
-                                self.scores(melody=value))
+                self.check_file("merit_scores", self.LABEL, self.scores(melody=value))
 
 
 class MuqRankingTest(ValidatorTest):
     LABEL = "Similarity Ranking"
 
     def rows(self):
-        return [{"rank": 1, "description": "piano", "similarity": 0.8},
-                {"rank": 2, "description": "drums", "similarity": 0.2}]
+        return [
+            {"rank": 1, "description": "piano", "similarity": 0.8},
+            {"rank": 2, "description": "drums", "similarity": 0.2},
+        ]
 
     def test_accepts_a_sorted_ranking(self):
-        self.check_file("muq_ranking", self.LABEL,
-                        {"results": self.rows()}, {"count": 2})
+        self.check_file("muq_ranking", self.LABEL, {"results": self.rows()}, {"count": 2})
 
     def test_rejects_the_wrong_number_of_candidates(self):
         with self.assertRaises(AssertionError) as caught:
-            self.check_file("muq_ranking", self.LABEL,
-                            {"results": self.rows()}, {"count": 3})
+            self.check_file("muq_ranking", self.LABEL, {"results": self.rows()}, {"count": 3})
         self.assertIn("expected 3", str(caught.exception))
 
     def test_rejects_an_unsorted_ranking(self):
         rows = self.rows()
         rows[1]["similarity"] = 0.9
         with self.assertRaises(AssertionError) as caught:
-            self.check_file("muq_ranking", self.LABEL,
-                            {"results": rows}, {"count": 2})
+            self.check_file("muq_ranking", self.LABEL, {"results": rows}, {"count": 2})
         self.assertIn("sorted", str(caught.exception))
 
     def test_rejects_a_misnumbered_rank(self):
         rows = self.rows()
         rows[1]["rank"] = 5
         with self.assertRaises(AssertionError):
-            self.check_file("muq_ranking", self.LABEL,
-                            {"results": rows}, {"count": 2})
+            self.check_file("muq_ranking", self.LABEL, {"results": rows}, {"count": 2})
 
     def test_rejects_an_empty_description(self):
         rows = self.rows()
         rows[0]["description"] = "   "
         with self.assertRaises(AssertionError):
-            self.check_file("muq_ranking", self.LABEL,
-                            {"results": rows}, {"count": 2})
+            self.check_file("muq_ranking", self.LABEL, {"results": rows}, {"count": 2})
 
     def test_requires_the_count_parameter(self):
         # Without it the validator would assert nothing about the length
         with self.assertRaises(ValueError):
-            self.check_file("muq_ranking", self.LABEL,
-                            {"results": self.rows()})
+            self.check_file("muq_ranking", self.LABEL, {"results": self.rows()})
 
 
 class ResultFileTest(ValidatorTest):
     """Failures in reading the file at all, which must read as model faults."""
 
-    CASES = (("merit_scores", "Similarity Results"),
-             ("muq_ranking", "Similarity Ranking"))
+    CASES = (("merit_scores", "Similarity Results"), ("muq_ranking", "Similarity Ranking"))
 
     def test_malformed_json_fails_the_model(self):
         self.path.write_text("not json" * 30, encoding="utf-8")
@@ -206,20 +202,21 @@ class TextExpectationsTest(unittest.TestCase):
 
     def test_excludes_takes_a_list_and_ignores_case(self):
         with self.assertRaises(AssertionError):
-            self.check("no predictions generated.",
-                       {"excludes": ["Error:", "No predictions generated."]})
+            self.check(
+                "no predictions generated.", {"excludes": ["Error:", "No predictions generated."]}
+            )
         self.check("C:maj G:maj", {"excludes": ["Error:"]})
 
     def test_a_missing_file_is_reported(self):
         with self.assertRaises(AssertionError):
-            check_expectations(self.LABEL, "generic_file",
-                               str(self.path) + ".absent", {"min_length": 1})
+            check_expectations(
+                self.LABEL, "generic_file", str(self.path) + ".absent", {"min_length": 1}
+            )
 
     def test_bytes_that_are_not_text_are_reported(self):
         self.path.write_bytes(b"\xff\xfe\x00binary")
         with self.assertRaises(AssertionError) as caught:
-            check_expectations(self.LABEL, "generic_file", str(self.path),
-                               {"min_length": 1})
+            check_expectations(self.LABEL, "generic_file", str(self.path), {"min_length": 1})
         self.assertIn("could not be read as text", str(caught.exception))
 
 
@@ -246,10 +243,12 @@ class ConfigFileTest(unittest.TestCase):
         # on merge, and it is invisible in the loaded configuration
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "config.yml"
-            path.write_text("overrides:\n"
-                            "  teamup-tech/a:\n    process_timeout: 10\n"
-                            "  teamup-tech/a:\n    process_timeout: 20\n",
-                            encoding="utf-8")
+            path.write_text(
+                "overrides:\n"
+                "  teamup-tech/a:\n    process_timeout: 10\n"
+                "  teamup-tech/a:\n    process_timeout: 20\n",
+                encoding="utf-8",
+            )
             with self.assertRaises(ValueError) as caught:
                 load_config(path)
             self.assertIn("duplicate key 'teamup-tech/a'", str(caught.exception))
@@ -260,7 +259,7 @@ class ConfigFileTest(unittest.TestCase):
         for entry in (config.get("overrides") or {}).values():
             cases += list((entry or {}).get("test_cases") or [])
         for case in cases:
-            for name in (case.get("validators") or {}):
+            for name in case.get("validators") or {}:
                 with self.subTest(case=case.get("name"), validator=name):
                     self.assertIn(name, VALIDATORS)
 
@@ -285,29 +284,37 @@ class MergeCommonCasesTest(unittest.TestCase):
     def test_checks_are_merged_rather_than_run(self):
         # A common case without inputs costs a /process call of its own for
         # nothing, so its rules ride along with the case of the model
-        cases = merge_common_cases([{"name": "decodes", "validators": {"audio_decodes": {}}}],
-                                   [{"name": "default"}])
+        cases = merge_common_cases(
+            [{"name": "decodes", "validators": {"audio_decodes": {}}}], [{"name": "default"}]
+        )
         self.assertEqual([case["name"] for case in cases], ["default"])
         self.assertIn("audio_decodes", cases[0]["validators"])
 
     def test_rules_on_one_output_accumulate(self):
         # Two common cases targeting the same output both keep their rules
-        cases = merge_common_cases([{"name": "a", "expect": {"*": {"min_bytes": 100}}},
-                                    {"name": "b", "expect": {"*": {"min_rms_db": -60}}}],
-                                   [{"name": "default"}])
+        cases = merge_common_cases(
+            [
+                {"name": "a", "expect": {"*": {"min_bytes": 100}}},
+                {"name": "b", "expect": {"*": {"min_rms_db": -60}}},
+            ],
+            [{"name": "default"}],
+        )
         self.assertEqual(cases[0]["expect"]["*"], {"min_bytes": 100, "min_rms_db": -60})
 
     def test_model_rules_win_on_a_conflict(self):
-        cases = merge_common_cases([{"name": "a", "expect": {"*": {"min_bytes": 100}}}],
-                                   [{"name": "default", "expect": {"*": {"min_bytes": 5}}}])
+        cases = merge_common_cases(
+            [{"name": "a", "expect": {"*": {"min_bytes": 100}}}],
+            [{"name": "default", "expect": {"*": {"min_bytes": 5}}}],
+        )
         self.assertEqual(cases[0]["expect"]["*"]["min_bytes"], 5)
 
     def test_scenarios_run_separately_with_the_model_inputs(self):
         # A common case that sends inputs is its own scenario, and inherits the
         # files the model needs but does not set itself
-        cases = merge_common_cases([{"name": "stereo",
-                                     "synthesized_inputs": {"audio": {"num_channels": 2}}}],
-                                   [{"name": "default", "files": {"In": "a.wav"}}])
+        cases = merge_common_cases(
+            [{"name": "stereo", "synthesized_inputs": {"audio": {"num_channels": 2}}}],
+            [{"name": "default", "files": {"In": "a.wav"}}],
+        )
         self.assertEqual([case["name"] for case in cases], ["common:stereo", "default"])
         self.assertEqual(cases[0]["files"], {"In": "a.wav"})
 
@@ -321,22 +328,36 @@ class ReportTest(unittest.TestCase):
 
     def test_a_failure_carries_the_end_of_its_log(self):
         from results import ModelResult, render_markdown
-        result = ModelResult(target="teamup-tech/a", error="AppError: boom",
-                             log_tail=["Traceback (most recent call last):",
-                                       "ValueError: the checkpoint is corrupt"])
-        report = render_markdown([result], {"passed": 0, "validated": 1, "skipped": 0,
-                                            "timestamp": "now", "command": ""})
+
+        result = ModelResult(
+            target="teamup-tech/a",
+            error="AppError: boom",
+            log_tail=[
+                "Traceback (most recent call last):",
+                "ValueError: the checkpoint is corrupt",
+            ],
+        )
+        report = render_markdown(
+            [result], {"passed": 0, "validated": 1, "skipped": 0, "timestamp": "now", "command": ""}
+        )
         self.assertIn("ValueError: the checkpoint is corrupt", report)
 
     def test_a_lint_run_lists_its_findings(self):
         from lint_base import Finding
         from results import ModelResult, render_markdown
-        result = ModelResult(target="teamup-tech/a", kind="lint", hardware="zero-a10g",
-                             cases=[Finding("spaces-exact", "spaces==0.51.3 is an exact pin",
-                                            10, "requirements.txt"),
-                                    Finding("unpinned", "not pinned to one version: numpy")])
-        report = render_markdown([result], {"passed": 0, "validated": 1, "skipped": 0,
-                                            "timestamp": "now", "command": ""})
+
+        result = ModelResult(
+            target="teamup-tech/a",
+            kind="lint",
+            hardware="zero-a10g",
+            cases=[
+                Finding("spaces-exact", "spaces==0.51.3 is an exact pin", 10, "requirements.txt"),
+                Finding("unpinned", "not pinned to one version: numpy"),
+            ],
+        )
+        report = render_markdown(
+            [result], {"passed": 0, "validated": 1, "skipped": 0, "timestamp": "now", "command": ""}
+        )
         self.assertIn("HARP Model Lint Report", report)
         self.assertIn("| 1 | 1 |", report)
         self.assertIn("requirements.txt:10: spaces==0.51.3", report)
@@ -345,8 +366,9 @@ class ReportTest(unittest.TestCase):
 class LabelsReachHarpTest(unittest.TestCase):
     """HARP reads a JSON output as a LabelList and draws it over a file output."""
 
-    CONTROLS = {"outputs": [{"type": "audio_track", "label": "Audio"},
-                            {"type": "json", "label": "Labels"}]}
+    CONTROLS = {
+        "outputs": [{"type": "audio_track", "label": "Audio"}, {"type": "json", "label": "Labels"}]
+    }
 
     def check(self, value, controls=None):
         VALIDATORS["labels_reach_harp"]({"Labels": value}, controls or self.CONTROLS, {})
@@ -362,8 +384,10 @@ class LabelsReachHarpTest(unittest.TestCase):
 
     def test_rejects_labels_with_nothing_to_appear_over(self):
         with self.assertRaises(AssertionError):
-            self.check({"meta": {"_type": "pyharp.LabelList"}, "labels": []},
-                       {"outputs": [{"type": "json", "label": "Labels"}]})
+            self.check(
+                {"meta": {"_type": "pyharp.LabelList"}, "labels": []},
+                {"outputs": [{"type": "json", "label": "Labels"}]},
+            )
 
     def test_skips_a_model_without_a_json_output(self):
         with self.assertRaises(ValidatorNotApplicable):
@@ -375,23 +399,32 @@ class LabelsWithinTracksTest(unittest.TestCase):
 
     def setUp(self):
         from assets import write_midi
+
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.audio = str(Path(self.temp.name) / "out.wav")
-        soundfile.write(self.audio, [0.25] * 44100 * 4, 44100)         # 4 s of audio
+        soundfile.write(self.audio, [0.25] * 44100 * 4, 44100)  # 4 s of audio
         self.midi = str(write_midi(Path(self.temp.name) / "out.mid", 2, 0.5))  # 1 s of MIDI
 
     def check(self, labels, outputs=("audio_track", "midi_track")):
-        specs = [{"label": "Audio", "type": "audio_track"}, {"label": "Notes", "type": "midi_track"},
-                 {"label": "Labels", "type": "json"}]
+        specs = [
+            {"label": "Audio", "type": "audio_track"},
+            {"label": "Notes", "type": "midi_track"},
+            {"label": "Labels", "type": "json"},
+        ]
         values = {"Audio": self.audio, "Notes": self.midi, "Labels": {"labels": labels}}
         kept = [spec for spec in specs if spec["type"] in outputs or spec["type"] == "json"]
-        VALIDATORS["labels_within_tracks"]({spec["label"]: values[spec["label"]] for spec in kept},
-                                           {"outputs": kept}, {})
+        VALIDATORS["labels_within_tracks"](
+            {spec["label"]: values[spec["label"]] for spec in kept}, {"outputs": kept}, {}
+        )
 
     def test_each_kind_against_its_own_track(self):
-        self.check([{"label_type": "AudioLabel", "t": 3.5, "duration": 0.4, "label": "late"},
-                    {"label_type": "MidiLabel", "t": 0.5, "duration": 0.4, "label": "end"}])
+        self.check(
+            [
+                {"label_type": "AudioLabel", "t": 3.5, "duration": 0.4, "label": "late"},
+                {"label_type": "MidiLabel", "t": 0.5, "duration": 0.4, "label": "end"},
+            ]
+        )
 
     def test_a_midi_label_past_the_midi_is_out_of_bounds(self):
         # It fits the 4 s audio, which is not the track it is drawn over
@@ -401,7 +434,9 @@ class LabelsWithinTracksTest(unittest.TestCase):
 
     def test_a_midi_only_model_is_checked(self):
         with self.assertRaises(AssertionError):
-            self.check([{"label_type": "MidiLabel", "t": 2.0, "label": "late"}], outputs=("midi_track",))
+            self.check(
+                [{"label_type": "MidiLabel", "t": 2.0, "label": "late"}], outputs=("midi_track",)
+            )
         self.check([{"label_type": "MidiLabel", "t": 0.5, "label": "end"}], outputs=("midi_track",))
 
     def test_a_model_with_no_track_is_skipped(self):
@@ -418,6 +453,7 @@ class RmsBoundsTest(unittest.TestCase):
         self.path = str(Path(self.temp.name) / "quiet.wav")
         # A sine at amplitude 0.01, about -43 dBFS RMS
         import numpy
+
         t = numpy.arange(44100) / 44100
         soundfile.write(self.path, 0.01 * numpy.sin(2 * numpy.pi * 440 * t), 44100)
 
@@ -435,6 +471,7 @@ class ClippingTest(unittest.TestCase):
 
     def setUp(self):
         import numpy
+
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         t = numpy.arange(48000) / 48000
@@ -452,6 +489,7 @@ class ClippingTest(unittest.TestCase):
 
     def test_a_low_tone_at_full_scale_is_not_clipping(self):
         import numpy
+
         t = numpy.arange(96000) / 48000
         path = self.write("bass.wav", numpy.sin(2 * numpy.pi * 20 * t))
         check_expectations("Mix", "audio_track", path, {"max_clipping": 0})
@@ -465,6 +503,7 @@ class ClippingTest(unittest.TestCase):
 
     def test_float_samples_over_full_scale_count(self):
         from audio import read_audio_props
+
         path = self.write("overs.wav", 1.5 * self.sine, subtype="FLOAT")
         self.assertGreater(read_audio_props("Mix", path)["clipping"], 0.3)
 
@@ -480,8 +519,9 @@ class ExpectTargetsTest(unittest.TestCase):
     def test_a_named_rule_replaces_the_same_rule_under_the_wildcard(self):
         # The stem of a separator for a source the input lacks lifts the common
         # floor on that stem alone, and the other stems keep it
-        targets = self.resolve({"*": {"min_rms_db": -80},
-                                "Guitar": {"min_rms_db": -float("inf"), "max_rms_db": -60}})
+        targets = self.resolve(
+            {"*": {"min_rms_db": -80}, "Guitar": {"min_rms_db": -float("inf"), "max_rms_db": -60}}
+        )
         self.assertEqual(targets["Guitar"], {"min_rms_db": -float("inf"), "max_rms_db": -60})
         self.assertEqual(targets["Vocals"], {"min_rms_db": -80})
 
@@ -490,8 +530,9 @@ class ExpectTargetsTest(unittest.TestCase):
         self.assertEqual(targets["Guitar"], {"min_rms_db": -90})
 
     def test_other_wildcard_rules_still_reach_a_named_output(self):
-        targets = self.resolve({"*": {"min_rms_db": -80, "min_duration": 7.8},
-                                "Guitar": {"min_rms_db": -90}})
+        targets = self.resolve(
+            {"*": {"min_rms_db": -80, "min_duration": 7.8}, "Guitar": {"min_rms_db": -90}}
+        )
         self.assertEqual(targets["Guitar"], {"min_rms_db": -90, "min_duration": 7.8})
 
     def test_a_wildcard_rule_reaches_only_the_types_it_covers(self):

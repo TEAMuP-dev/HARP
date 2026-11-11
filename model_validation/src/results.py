@@ -9,14 +9,14 @@ from pathlib import Path
 
 
 __all__ = [
-    'PASS',
-    'FAIL',
-    'SKIP',
-    'CaseResult',
-    'ModelResult',
-    'status_emoji',
-    'case_emoji',
-    'write_reports'
+    "PASS",
+    "FAIL",
+    "SKIP",
+    "CaseResult",
+    "ModelResult",
+    "status_emoji",
+    "case_emoji",
+    "write_reports",
 ]
 
 
@@ -28,39 +28,39 @@ class CaseResult:
     """Outcome of a single /process test case."""
 
     name: str
-    ok: bool | None = None    # None => skipped
-    duration: float = 0.0     # total /process wall time (queue + execution)
-    gpu_calls: int = 0        # /process calls that reached the GPU, each of
-                              # which reserves ZeroGPU allowance. A retried
-                              # call reserves another time and counts again
+    ok: bool | None = None  # None => skipped
+    duration: float = 0.0  # total /process wall time (queue + execution)
+    gpu_calls: int = 0  # /process calls that reached the GPU, each of
+    # which reserves ZeroGPU allowance. A retried
+    # call reserves another time and counts again
     error: str = ""
     observed: dict = dataclasses.field(default_factory=dict)
-                              # Output label -> measured properties, for
-                              # properties no rule asserts (see
-                              # cases.measure_outputs)
+    # Output label -> measured properties, for
+    # properties no rule asserts (see
+    # cases.measure_outputs)
 
 
 @dataclasses.dataclass
 class ModelResult:
     """Outcome of validating one model deployment."""
 
-    target: str                       # space id or "examples/<example>"
-    kind: str = "space"               # "space" | "local" | "lint"
-    status: str = FAIL                # default, so any early return with an
-                                      # error set is recorded as a failure
-    stage: str = ""                   # HF runtime stage, or "LOCAL"
-    hardware: str = ""                # HF hardware (e.g. "zero-a10g", "cpu-basic")
-    zerogpu: bool = False             # spends ZeroGPU allowance, on its own hardware
-                                      # or that of a backend (see quota.spends_zerogpu)
+    target: str  # space id or "examples/<example>"
+    kind: str = "space"  # "space" | "local" | "lint"
+    status: str = FAIL  # default, so any early return with an
+    # error set is recorded as a failure
+    stage: str = ""  # HF runtime stage, or "LOCAL"
+    hardware: str = ""  # HF hardware (e.g. "zero-a10g", "cpu-basic")
+    zerogpu: bool = False  # spends ZeroGPU allowance, on its own hardware
+    # or that of a backend (see quota.spends_zerogpu)
     controls_ok: bool = False
     cases: list = dataclasses.field(default_factory=list)
-                                      # CaseResult per test case, or for the
-                                      # lint, lint.Finding per finding
+    # CaseResult per test case, or for the
+    # lint, lint.Finding per finding
     duration: float = 0.0
     error: str = ""
-    model_name: str = ""              # from the model card
+    model_name: str = ""  # from the model card
     log_tail: list = dataclasses.field(default_factory=list)
-                                      # the end of the run log of a failed space
+    # the end of the run log of a failed space
 
 
 def status_emoji(result: ModelResult) -> str:
@@ -111,7 +111,7 @@ def write_reports(results: list, out_dir: Path, command: str = "") -> dict:
     passed = sum(r.status == PASS for r in results)
     failed = sum(r.status == FAIL for r in results)
     skipped = sum(r.status == SKIP for r in results)
-    validated = len(results) - skipped   # denominator excludes skipped models
+    validated = len(results) - skipped  # denominator excludes skipped models
 
     payload = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -160,22 +160,28 @@ def render_markdown(results: list, payload: dict) -> str:
     lines += [f"{headline} ({payload['timestamp']})", ""]
     if payload["command"]:
         lines += [f"Command: `{payload['command']}`", ""]
-    lines += ["| Model | Status | Stage | Hardware | Controls | Cases | Time (s) |",
-              "|---|---|---|---|---|---|---|"]
+    lines += [
+        "| Model | Status | Stage | Hardware | Controls | Cases | Time (s) |",
+        "|---|---|---|---|---|---|---|",
+    ]
 
     for r in ranked:
         cases = ", ".join(f"{c.name} {case_emoji(c.ok)}" for c in r.cases) or "-"
-        link = (f"[{r.target}](https://huggingface.co/spaces/{r.target})"
-                if r.kind == "space" else f"`{r.target}`")
-        lines.append(f"| {link} | {status_emoji(r)} {r.status} | {r.stage} "
-                     f"| {r.hardware or '-'} | {'✅' if r.controls_ok else '❌'} "
-                     f"| {cases} | {r.duration} |")
+        link = (
+            f"[{r.target}](https://huggingface.co/spaces/{r.target})"
+            if r.kind == "space"
+            else f"`{r.target}`"
+        )
+        lines.append(
+            f"| {link} | {status_emoji(r)} {r.status} | {r.stage} "
+            f"| {r.hardware or '-'} | {'✅' if r.controls_ok else '❌'} "
+            f"| {cases} | {r.duration} |"
+        )
 
     # Everything that reported text, including a skipped case on an otherwise
     # passing model. A model-level error is the joined case errors whenever
     # there are cases, so it is only printed when there are none.
-    problems = [r for r in ranked
-                if r.error or r.status == FAIL or any(c.error for c in r.cases)]
+    problems = [r for r in ranked if r.error or r.status == FAIL or any(c.error for c in r.cases)]
     if problems:
         lines += ["", "## Details", ""]
         for r in problems:
@@ -184,11 +190,18 @@ def render_markdown(results: list, payload: dict) -> str:
                 lines += ["```", r.error, "```", ""]
             for c in r.cases:
                 if c.error:
-                    lines += [f"- **{c.name}** {case_emoji(c.ok)}", "",
-                              "```", c.error, "```", ""]
+                    lines += [f"- **{c.name}** {case_emoji(c.ok)}", "", "```", c.error, "```", ""]
             if r.log_tail:
-                lines += ["<details><summary>End of the space's log</summary>", "",
-                          "```", *r.log_tail, "```", "", "</details>", ""]
+                lines += [
+                    "<details><summary>End of the space's log</summary>",
+                    "",
+                    "```",
+                    *r.log_tail,
+                    "```",
+                    "",
+                    "</details>",
+                    "",
+                ]
 
     return "\n".join(lines) + "\n"
 
@@ -212,17 +225,20 @@ def render_lint_markdown(ranked: list, payload: dict) -> str:
         return sum(getattr(finding, "severity", "") == severity for finding in r.cases)
 
     lines = ["# HARP Model Lint Report", ""]
-    lines += [f"**{payload['passed']}/{payload['validated']} spaces passed** "
-              f"({payload['timestamp']})", ""]
+    lines += [
+        f"**{payload['passed']}/{payload['validated']} spaces passed** ({payload['timestamp']})",
+        "",
+    ]
     if payload["command"]:
         lines += [f"Command: `{payload['command']}`", ""]
-    lines += ["| Space | Status | Hardware | Errors | Warnings |",
-              "|---|---|---|---|---|"]
+    lines += ["| Space | Status | Hardware | Errors | Warnings |", "|---|---|---|---|---|"]
 
     for r in ranked:
-        lines.append(f"| [{r.target}](https://huggingface.co/spaces/{r.target}) "
-                     f"| {status_emoji(r)} {r.status} | {r.hardware or '-'} "
-                     f"| {count(r, 'error')} | {count(r, 'warning')} |")
+        lines.append(
+            f"| [{r.target}](https://huggingface.co/spaces/{r.target}) "
+            f"| {status_emoji(r)} {r.status} | {r.hardware or '-'} "
+            f"| {count(r, 'error')} | {count(r, 'warning')} |"
+        )
 
     problems = [r for r in ranked if r.cases or r.error]
     if problems:

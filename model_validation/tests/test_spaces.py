@@ -6,12 +6,13 @@ These run locally with no network and no Hugging Face token:
     python -m unittest discover -s model_validation/tests -v
 """
 
-from pathlib import Path
 import sys
 import time
-from types import SimpleNamespace
 import unittest
+from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -50,10 +51,14 @@ class SpaceMetadataTest(unittest.TestCase):
 
         def space_info(space_id):
             calls.append(space_id)
-            return SimpleNamespace(host="https://a.hf.space",
-                                   card_data=SimpleNamespace(tags=["input:audio"], title="A"))
+            return SimpleNamespace(
+                host="https://a.hf.space",
+                card_data=SimpleNamespace(tags=["input:audio"], title="A"),
+            )
 
-        host, readme = spaces.space_metadata(SimpleNamespace(space_info=space_info), "teamup-tech/a")
+        host, readme = spaces.space_metadata(
+            SimpleNamespace(space_info=space_info), "teamup-tech/a"
+        )
         self.assertEqual(host, "https://a.hf.space")
         self.assertEqual(readme, {"tags": ["input:audio"], "title": "A"})
         self.assertEqual(calls, ["teamup-tech/a"])
@@ -62,15 +67,19 @@ class SpaceMetadataTest(unittest.TestCase):
         def space_info(_):
             raise RuntimeError("429")
 
-        self.assertEqual(spaces.space_metadata(SimpleNamespace(space_info=space_info), "x"),
-                         (None, None))
+        self.assertEqual(
+            spaces.space_metadata(SimpleNamespace(space_info=space_info), "x"), (None, None)
+        )
 
     def test_a_wake_given_the_host_looks_it_up_no_further(self):
-        api = SimpleNamespace(space_info=mock.Mock(side_effect=AssertionError("looked up")),
-                              get_space_runtime=lambda _: SimpleNamespace(stage="RUNNING"))
+        api = SimpleNamespace(
+            space_info=mock.Mock(side_effect=AssertionError("looked up")),
+            get_space_runtime=lambda _: SimpleNamespace(stage="RUNNING"),
+        )
         with mock.patch.object(spaces, "wake_space", return_value=(True, "")) as wake:
-            stage, problem = spaces.start_space(api, "teamup-tech/a", time.time() + 60,
-                                                host="https://a.hf.space")
+            stage, problem = spaces.start_space(
+                api, "teamup-tech/a", time.time() + 60, host="https://a.hf.space"
+            )
         self.assertEqual((stage, problem), ("RUNNING", ""))
         wake.assert_called_once()
         self.assertEqual(wake.call_args.args[0], "https://a.hf.space")

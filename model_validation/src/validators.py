@@ -40,11 +40,7 @@ from audio import read_audio_props
 from midi import read_midi_props
 
 
-__all__ = [
-    'VALIDATORS',
-    'validator',
-    'ValidatorNotApplicable'
-]
+__all__ = ["VALIDATORS", "validator", "ValidatorNotApplicable"]
 
 
 class ValidatorNotApplicable(Exception):
@@ -75,6 +71,7 @@ def validator(name):
     def register(fn):
         VALIDATORS[name] = fn
         return fn
+
     return register
 
 
@@ -100,13 +97,14 @@ def json_file(outputs, label):
     """
 
     if label not in outputs:
-        raise ValueError(f"validator expects an output labeled '{label}', "
-                         f"which this model does not have (available: "
-                         f"{sorted(outputs)})")
+        raise ValueError(
+            f"validator expects an output labeled '{label}', "
+            f"which this model does not have (available: "
+            f"{sorted(outputs)})"
+        )
 
     path = outputs[label]
-    assert isinstance(path, str), \
-        f"output '{label}' is not a file path: {str(path)[:100]}"
+    assert isinstance(path, str), f"output '{label}' is not a file path: {str(path)[:100]}"
 
     try:
         with Path(path).open(encoding="utf-8") as stream:
@@ -116,8 +114,9 @@ def json_file(outputs, label):
     except OSError as exc:
         raise AssertionError(f"output '{label}' could not be read: {exc}") from exc
 
-    assert isinstance(result, dict), \
+    assert isinstance(result, dict), (
         f"output '{label}' must hold a JSON object, got {type(result).__name__}"
+    )
 
     return result
 
@@ -142,10 +141,8 @@ def entry(mapping, key, label):
         AssertionError: If the mapping is not a dict or lacks the key.
     """
 
-    assert isinstance(mapping, dict), \
-        f"{label} must be a JSON object, got {type(mapping).__name__}"
-    assert key in mapping, \
-        f"{label} is missing '{key}' (found: {sorted(mapping)})"
+    assert isinstance(mapping, dict), f"{label} must be a JSON object, got {type(mapping).__name__}"
+    assert key in mapping, f"{label} is missing '{key}' (found: {sorted(mapping)})"
 
     return mapping[key]
 
@@ -163,8 +160,9 @@ def finite_number(value, label):
             rejected too, since `type` is compared rather than `isinstance`.
     """
 
-    assert type(value) in (int, float) and math.isfinite(value), \
+    assert type(value) in (int, float) and math.isfinite(value), (
         f"'{label}' must be a finite number, got {value!r}"
+    )
 
 
 @validator("merit_scores")
@@ -181,16 +179,16 @@ def merit_scores(outputs, controls, params):
         ValueError: If the model has no "Similarity Results" output.
     """
 
-    scores = entry(json_file(outputs, "Similarity Results"), "scores",
-                   "MERIT's result")
+    scores = entry(json_file(outputs, "Similarity Results"), "scores", "MERIT's result")
 
     for name in ("melody", "rhythm", "timbre"):
         value = entry(scores, name, "MERIT's scores")
         finite_number(value, name)
         # Floating point leaves an exact 1.0 marginally over, so the bound is
         # loosened rather than rejecting a legitimately perfect match
-        assert -1.000001 <= value <= 1.000001, \
+        assert -1.000001 <= value <= 1.000001, (
             f"MERIT {name} cosine similarity is outside [-1, 1]: {value}"
+        )
 
 
 @validator("muq_ranking")
@@ -210,33 +208,35 @@ def muq_ranking(outputs, controls, params):
     """
 
     if "count" not in params:
-        raise ValueError("muq_ranking needs `count`, the number of candidate "
-                         "descriptions the test case supplied")
+        raise ValueError(
+            "muq_ranking needs `count`, the number of candidate descriptions the test case supplied"
+        )
 
-    rows = entry(json_file(outputs, "Similarity Ranking"), "results",
-                 "MuQ's result")
+    rows = entry(json_file(outputs, "Similarity Ranking"), "results", "MuQ's result")
 
-    assert isinstance(rows, list), \
-        f"MuQ's ranking must be a list, got {type(rows).__name__}"
-    assert len(rows) == params["count"], \
-        (f"MuQ returned {len(rows)} ranked candidate(s), expected "
-         f"{params['count']}")
+    assert isinstance(rows, list), f"MuQ's ranking must be a list, got {type(rows).__name__}"
+    assert len(rows) == params["count"], (
+        f"MuQ returned {len(rows)} ranked candidate(s), expected {params['count']}"
+    )
 
     previous = math.inf
 
     for rank, row in enumerate(rows, start=1):
-        assert entry(row, "rank", f"MuQ candidate {rank}") == rank, \
+        assert entry(row, "rank", f"MuQ candidate {rank}") == rank, (
             f"MuQ candidate {rank} is ranked {entry(row, 'rank', 'it')}"
+        )
 
         description = entry(row, "description", f"MuQ candidate {rank}")
-        assert isinstance(description, str) and description.strip(), \
+        assert isinstance(description, str) and description.strip(), (
             f"MuQ candidate {rank} has an empty description"
+        )
 
         score = entry(row, "similarity", f"MuQ candidate {rank}")
         finite_number(score, "similarity")
-        assert score <= previous, \
-            (f"MuQ candidate {rank} scores {score}, above the {previous} "
-             f"before it, so the ranking is not sorted by similarity")
+        assert score <= previous, (
+            f"MuQ candidate {rank} scores {score}, above the {previous} "
+            f"before it, so the ranking is not sorted by similarity"
+        )
         previous = score
 
 
@@ -258,8 +258,11 @@ def audio_decodes(outputs, controls, params):
         ValidatorNotApplicable: If the model returns no audio.
     """
 
-    audio_labels = [spec.get("label") for spec in controls.get("outputs", [])
-                    if spec.get("type") == "audio_track"]
+    audio_labels = [
+        spec.get("label")
+        for spec in controls.get("outputs", [])
+        if spec.get("type") == "audio_track"
+    ]
 
     checked = False
 
@@ -295,15 +298,20 @@ def declared_format(outputs, controls, params):
     if any(input_kind(spec) == "audio" for spec in controls.get("inputs", [])):
         raise ValidatorNotApplicable("the model takes audio, so returns its format")
 
-    audio_labels = [spec.get("label") for spec in controls.get("outputs", [])
-                    if spec.get("type") == "audio_track"
-                    and isinstance(outputs.get(spec.get("label")), str)]
+    audio_labels = [
+        spec.get("label")
+        for spec in controls.get("outputs", [])
+        if spec.get("type") == "audio_track" and isinstance(outputs.get(spec.get("label")), str)
+    ]
     if not audio_labels:
         raise ValidatorNotApplicable("no audio output")
 
     tags = (controls.get("card") or {}).get("tags") or []
-    declared = {key: value for key, _, value in (tag.partition(":") for tag in tags)
-                if key in ("sample-rate", "channels")}
+    declared = {
+        key: value
+        for key, _, value in (tag.partition(":") for tag in tags)
+        if key in ("sample-rate", "channels")
+    }
     channel_names = {1: "mono", 2: "stereo"}
 
     for label in audio_labels:
@@ -311,18 +319,21 @@ def declared_format(outputs, controls, params):
         rate = str(props["sample_rate"])
         channels = channel_names.get(props["num_channels"], str(props["num_channels"]))
 
-        assert "sample-rate" in declared, \
-            (f"'{label}' is {rate} Hz audio, made from no audio input, but the card "
-             f"declares no sample rate. Add SampleRate({rate}) to its tags")
-        assert declared["sample-rate"] == rate, \
-            (f"'{label}' is {rate} Hz audio, but the card declares "
-             f"sample-rate:{declared['sample-rate']}")
-        assert "channels" in declared, \
-            (f"'{label}' is {channels} audio, made from no audio input, but the card "
-             f"declares no channel count. Add Channels({props['num_channels']}) to its tags")
-        assert declared["channels"] == channels, \
-            (f"'{label}' is {channels} audio, but the card declares "
-             f"channels:{declared['channels']}")
+        assert "sample-rate" in declared, (
+            f"'{label}' is {rate} Hz audio, made from no audio input, but the card "
+            f"declares no sample rate. Add SampleRate({rate}) to its tags"
+        )
+        assert declared["sample-rate"] == rate, (
+            f"'{label}' is {rate} Hz audio, but the card declares "
+            f"sample-rate:{declared['sample-rate']}"
+        )
+        assert "channels" in declared, (
+            f"'{label}' is {channels} audio, made from no audio input, but the card "
+            f"declares no channel count. Add Channels({props['num_channels']}) to its tags"
+        )
+        assert declared["channels"] == channels, (
+            f"'{label}' is {channels} audio, but the card declares channels:{declared['channels']}"
+        )
 
 
 # The output types over which HARP draws labels. A label output on its own has
@@ -354,19 +365,22 @@ def labels_reach_harp(outputs, controls, params):
     if not json_labels:
         raise ValidatorNotApplicable("no JSON output")
 
-    assert any(spec.get("type") in FILE_OUTPUT_TYPES for spec in specs), \
-        (f"labels {json_labels} have no audio, MIDI or file output to appear "
-         f"over, and HARP shows labels nowhere else")
+    assert any(spec.get("type") in FILE_OUTPUT_TYPES for spec in specs), (
+        f"labels {json_labels} have no audio, MIDI or file output to appear "
+        f"over, and HARP shows labels nowhere else"
+    )
 
     for label in json_labels:
         value = outputs.get(label)
         meta = value.get("meta") if isinstance(value, dict) else None
         kind = meta.get("_type") if isinstance(meta, dict) else None
-        assert kind == "pyharp.LabelList", \
-            (f"'{label}' is not a pyharp LabelList, which HARP rejects, failing the "
-             f"request: {json.dumps(value)[:200]}")
-        assert isinstance(value.get("labels"), list), \
+        assert kind == "pyharp.LabelList", (
+            f"'{label}' is not a pyharp LabelList, which HARP rejects, failing the "
+            f"request: {json.dumps(value)[:200]}"
+        )
+        assert isinstance(value.get("labels"), list), (
             f"'{label}' is a LabelList without a list of labels"
+        )
 
 
 @validator("labels_within_tracks")
@@ -419,12 +433,14 @@ def labels_within_tracks(outputs, controls, params):
             duration, kind = durations[track], names[track]
             start = entry.get("t") or 0.0
             end = start + (entry.get("duration") or 0.0)
-            assert -tolerance <= start <= duration + tolerance, \
-                (f"'{label}': label \"{entry.get('label')}\" starts at {start:.2f}s, "
-                 f"outside the {duration:.2f}s {kind} output")
-            assert end <= duration + tolerance, \
-                (f"'{label}': label \"{entry.get('label')}\" ends at {end:.2f}s, "
-                 f"past the {duration:.2f}s {kind} output")
+            assert -tolerance <= start <= duration + tolerance, (
+                f"'{label}': label \"{entry.get('label')}\" starts at {start:.2f}s, "
+                f"outside the {duration:.2f}s {kind} output"
+            )
+            assert end <= duration + tolerance, (
+                f"'{label}': label \"{entry.get('label')}\" ends at {end:.2f}s, "
+                f"past the {duration:.2f}s {kind} output"
+            )
 
     if not checked:
         raise ValidatorNotApplicable("no pyharp LabelList output to check")

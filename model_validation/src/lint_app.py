@@ -14,27 +14,42 @@ from pathlib import Path
 from lint_base import Finding
 
 
-__all__ = [
-    'LocalModules',
-    'lint_app',
-    'lint_containers',
-    'lint_revisions'
-]
+__all__ = ["LocalModules", "lint_app", "lint_containers", "lint_revisions"]
 
 
 # Calls that load a model or fetch its weights. The final name is enough for
 # most, and the dotted ones are too generic to match by their last part alone.
 LOADER_NAMES = {
-    "from_pretrained", "from_hparams", "from_checkpoint", "from_local",
-    "load_model", "load_models", "load_checkpoint", "load_state_dict",
-    "load_pretrained_model", "load_separator", "load_finetuned", "load_compiled", "prepare_model",
-    "get_model", "get_pretrained", "hf_hub_download", "snapshot_download",
-    "download_model_from_huggingface", "preload_models", "init_df",
+    "from_pretrained",
+    "from_hparams",
+    "from_checkpoint",
+    "from_local",
+    "load_model",
+    "load_models",
+    "load_checkpoint",
+    "load_state_dict",
+    "load_pretrained_model",
+    "load_separator",
+    "load_finetuned",
+    "load_compiled",
+    "prepare_model",
+    "get_model",
+    "get_pretrained",
+    "hf_hub_download",
+    "snapshot_download",
+    "download_model_from_huggingface",
+    "preload_models",
+    "init_df",
 }
 
 
-LOADER_DOTTED = {"torch.load", "torch.hub.load", "torch.jit.load", "whisper.load_model",
-                 "Interface.default"}
+LOADER_DOTTED = {
+    "torch.load",
+    "torch.hub.load",
+    "torch.jit.load",
+    "whisper.load_model",
+    "Interface.default",
+}
 
 
 # Calls that start a function in the background, whose target therefore runs
@@ -73,11 +88,16 @@ def is_name_guard(node, negated: bool) -> bool:
         return False
 
     wanted = '__name__ != "__main__"' if negated else '__name__ == "__main__"'
-    tests = node.test.values if isinstance(node.test, ast.BoolOp) \
-        and isinstance(node.test.op, ast.And) else [node.test]
+    tests = (
+        node.test.values
+        if isinstance(node.test, ast.BoolOp) and isinstance(node.test.op, ast.And)
+        else [node.test]
+    )
 
-    return any(isinstance(test, ast.Compare)
-               and ast.unparse(test).replace("'", '"') == wanted for test in tests)
+    return any(
+        isinstance(test, ast.Compare) and ast.unparse(test).replace("'", '"') == wanted
+        for test in tests
+    )
 
 
 def dotted(node) -> str:
@@ -116,7 +136,8 @@ def is_loader(call: ast.Call) -> bool:
     name = dotted(call.func)
 
     return name.split(".")[-1] in LOADER_NAMES or any(
-        name == loader or name.endswith(f".{loader}") for loader in LOADER_DOTTED)
+        name == loader or name.endswith(f".{loader}") for loader in LOADER_DOTTED
+    )
 
 
 def statements_outside(body: list, skip_guards: bool = True):
@@ -136,8 +157,9 @@ def statements_outside(body: list, skip_guards: bool = True):
     """
 
     for node in body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef,
-                             ast.Import, ast.ImportFrom)):
+        if isinstance(
+            node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Import, ast.ImportFrom)
+        ):
             continue
         if skip_guards and (is_name_guard(node, True) or is_name_guard(node, False)):
             continue
@@ -163,8 +185,7 @@ def calls_in(node) -> list:
 
     def visit(current):
         for child in ast.iter_child_nodes(current):
-            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef,
-                                  ast.Lambda)):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
                 continue
             if isinstance(child, ast.Call):
                 found.append(child)
@@ -193,8 +214,11 @@ def imports_outside(body: list):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             yield node
             continue
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) \
-                or is_name_guard(node, True) or is_name_guard(node, False):
+        if (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            or is_name_guard(node, True)
+            or is_name_guard(node, False)
+        ):
             continue
         for field in ("body", "orelse", "finalbody", "handlers"):
             nested = getattr(node, field, None)
@@ -301,17 +325,22 @@ class LoaderTracer:
 
     def __init__(self, tree: ast.Module, modules: LocalModules | None = None):
         self.tree = tree
-        self.functions = {node.name: node for node in tree.body
-                          if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
-        self.classes = {node.name: node for node in tree.body
-                        if isinstance(node, ast.ClassDef)}
+        self.functions = {
+            node.name: node
+            for node in tree.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+        self.classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
         self.modules = modules
         # alias -> (local module, imported name, or None for the module itself)
         self.imports = {}
         if modules is not None:
             for node in ast.walk(tree):
-                if isinstance(node, ast.ImportFrom) and node.level == 0 \
-                        and node.module in modules.trees:
+                if (
+                    isinstance(node, ast.ImportFrom)
+                    and node.level == 0
+                    and node.module in modules.trees
+                ):
                     for alias in node.names:
                         self.imports[alias.asname or alias.name] = (node.module, alias.name)
                 elif isinstance(node, ast.Import):
@@ -369,14 +398,20 @@ class LoaderTracer:
         if name in self.functions:
             bodies = [self.functions[name]]
         elif name in self.classes:
-            bodies = [node for node in self.classes[name].body
-                      if isinstance(node, ast.FunctionDef) and node.name == "__init__"]
+            bodies = [
+                node
+                for node in self.classes[name].body
+                if isinstance(node, ast.FunctionDef) and node.name == "__init__"
+            ]
         else:
             return False
 
-        loads = any(self.call_loads(call, depth + 1)
-                    for body in bodies for call in ast.walk(body)
-                    if isinstance(call, ast.Call) and call is not body)
+        loads = any(
+            self.call_loads(call, depth + 1)
+            for body in bodies
+            for call in ast.walk(body)
+            if isinstance(call, ast.Call) and call is not body
+        )
         self._memo[name] = loads
 
         return loads
@@ -423,12 +458,17 @@ class LoaderTracer:
 
         if self._loaded_globals is None:
             self._loaded_globals = set()
-            blocks = [self.tree.body] + [node.body for node in self.tree.body
-                                         if is_name_guard(node, True)]
+            blocks = [self.tree.body] + [
+                node.body for node in self.tree.body if is_name_guard(node, True)
+            ]
             for block in blocks:
                 for node in statements_outside(block):
-                    if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call) \
-                            and self.call_loads(node.value) and not self.call_places(node.value):
+                    if (
+                        isinstance(node, ast.Assign)
+                        and isinstance(node.value, ast.Call)
+                        and self.call_loads(node.value)
+                        and not self.call_places(node.value)
+                    ):
                         self._loaded_globals |= assigned_names(node)
 
         return set(self._loaded_globals)
@@ -450,15 +490,19 @@ class LoaderTracer:
         """
 
         if any(keyword.arg in ("device", "map_location") for keyword in call.keywords) or any(
-                "device" in dotted(argument).lower() for argument in call.args):
+            "device" in dotted(argument).lower() for argument in call.args
+        ):
             return True
 
         tracer, target = self.resolve(dotted(call.func))
         function = tracer.functions.get(target) if tracer is not None else None
 
         return function is not None and any(
-            isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
-            and node.func.attr in MOVE_METHODS for node in ast.walk(function))
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr in MOVE_METHODS
+            for node in ast.walk(function)
+        )
 
 
 def assigned_names(node: ast.Assign) -> set:
@@ -543,8 +587,12 @@ def gpu_call_loading(tree: ast.Module, tracer: LoaderTracer) -> list:
     def visit(owner, function, through, depth):
         loaded = owner.loaded_globals()
         for node in ast.walk(function):
-            if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call) \
-                    and owner.call_loads(node.value) and not owner.call_places(node.value):
+            if (
+                isinstance(node, ast.Assign)
+                and isinstance(node.value, ast.Call)
+                and owner.call_loads(node.value)
+                and not owner.call_places(node.value)
+            ):
                 loaded |= assigned_names(node)
         via = f", through {'() and '.join(through)}()" if through else ""
 
@@ -554,12 +602,22 @@ def gpu_call_loading(tree: ast.Module, tracer: LoaderTracer) -> list:
             if callee is not None and (id(callee), target) in started:
                 continue
             if is_loader(call):
-                return call, f"{name}() runs inside the GPU call{via}, so ZeroGPU repeats it on " \
-                             f"every call. Load in the worker at startup"
-            if isinstance(call.func, ast.Attribute) and call.func.attr in MOVE_METHODS \
-                    and isinstance(call.func.value, ast.Name) and call.func.value.id in loaded:
-                return call, f"{name}() moves a model inside the GPU call{via}, so ZeroGPU " \
-                             f"repeats it on every call. Place it in the worker at startup"
+                return (
+                    call,
+                    f"{name}() runs inside the GPU call{via}, so ZeroGPU repeats it on "
+                    f"every call. Load in the worker at startup",
+                )
+            if (
+                isinstance(call.func, ast.Attribute)
+                and call.func.attr in MOVE_METHODS
+                and isinstance(call.func.value, ast.Name)
+                and call.func.value.id in loaded
+            ):
+                return (
+                    call,
+                    f"{name}() moves a model inside the GPU call{via}, so ZeroGPU "
+                    f"repeats it on every call. Place it in the worker at startup",
+                )
             if callee is None or depth >= MAX_CALL_DEPTH:
                 continue
             if target in callee.functions:
@@ -567,15 +625,21 @@ def gpu_call_loading(tree: ast.Module, tracer: LoaderTracer) -> list:
                 if found:
                     return found
             elif callee.body_loads(target):
-                return call, f"{name}() builds a model inside the GPU call{via}, so ZeroGPU " \
-                             f"builds it again on every call. Build it in the worker at startup"
+                return (
+                    call,
+                    f"{name}() builds a model inside the GPU call{via}, so ZeroGPU "
+                    f"builds it again on every call. Build it in the worker at startup",
+                )
 
         return None
 
     found = []
-    for function in (node for node in ast.walk(tree)
-                     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-                     and any(is_gpu_decorator(d) for d in node.decorator_list)):
+    for function in (
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and any(is_gpu_decorator(d) for d in node.decorator_list)
+    ):
         loading = visit(tracer, function, [], 0)
         if loading:
             found.append(loading)
@@ -619,8 +683,11 @@ def base_call(node):
             expression is not a call.
     """
 
-    while isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) \
-            and isinstance(node.func.value, ast.Call):
+    while (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Call)
+    ):
         node = node.func.value
 
     return node if isinstance(node, ast.Call) else None
@@ -654,8 +721,10 @@ def input_component_calls(tree: ast.Module) -> list:
     for call in ast.walk(tree):
         if not (isinstance(call, ast.Call) and dotted(call.func).endswith("build_endpoint")):
             continue
-        inputs = next((kw.value for kw in call.keywords if kw.arg == "input_components"),
-                      call.args[1] if len(call.args) > 1 else None)
+        inputs = next(
+            (kw.value for kw in call.keywords if kw.arg == "input_components"),
+            call.args[1] if len(call.args) > 1 else None,
+        )
         inputs = resolve(inputs) if inputs is not None else None
         if isinstance(inputs, (ast.List, ast.Tuple)):
             for element in inputs.elts:
@@ -682,8 +751,13 @@ def is_gpu_decorator(node) -> bool:
     return name in ("spaces.GPU", "GPU")
 
 
-def lint_app(text: str, file: str, modules: LocalModules | None = None,
-             zerogpu: bool = False, gradio_sdk: bool = True) -> list:
+def lint_app(
+    text: str,
+    file: str,
+    modules: LocalModules | None = None,
+    zerogpu: bool = False,
+    gradio_sdk: bool = True,
+) -> list:
     """
     Check an app file against the structural rules of docs/DEPLOYMENT.md.
 
@@ -717,8 +791,11 @@ def lint_app(text: str, file: str, modules: LocalModules | None = None,
     spaces_import = None
     for node in tree.body:
         if isinstance(node, (ast.Import, ast.ImportFrom)):
-            names = ([alias.name for alias in node.names] if isinstance(node, ast.Import)
-                     else [node.module or ""])
+            names = (
+                [alias.name for alias in node.names]
+                if isinstance(node, ast.Import)
+                else [node.module or ""]
+            )
             roots = {name.split(".")[0] for name in names}
             if "spaces" in roots:
                 spaces_import = node
@@ -729,24 +806,40 @@ def lint_app(text: str, file: str, modules: LocalModules | None = None,
 
     if spaces_import is not None and first_third_party is not None:
         node, module = first_third_party
-        find("spaces-first", f"spaces is imported after {module} (line {node.lineno}), "
-                             f"which initializes CUDA first on ZeroGPU", spaces_import)
+        find(
+            "spaces-first",
+            f"spaces is imported after {module} (line {node.lineno}), "
+            f"which initializes CUDA first on ZeroGPU",
+            spaces_import,
+        )
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Try) and any(
-                isinstance(stmt, (ast.Import, ast.ImportFrom))
-                and "spaces" in ast.unparse(stmt).split() for stmt in node.body):
-            find("spaces-fallback", "spaces is imported inside a try, as a fallback for "
-                                    "it missing, though it is always installed", node)
+            isinstance(stmt, (ast.Import, ast.ImportFrom)) and "spaces" in ast.unparse(stmt).split()
+            for stmt in node.body
+        ):
+            find(
+                "spaces-fallback",
+                "spaces is imported inside a try, as a fallback for "
+                "it missing, though it is always installed",
+                node,
+            )
 
     # --- the GPU decorator, off process_fn -----------------------------------
     process_name = process_fn_name(tree)
-    functions = {node.name: node for node in ast.walk(tree)
-                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    functions = {
+        node.name: node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
     process = functions.get(process_name)
     if process is not None and any(is_gpu_decorator(d) for d in process.decorator_list):
-        find("gpu-on-process-fn", f"@spaces.GPU decorates {process_name}, so the GPU is "
-                                  f"reserved before its input is checked", process)
+        find(
+            "gpu-on-process-fn",
+            f"@spaces.GPU decorates {process_name}, so the GPU is "
+            f"reserved before its input is checked",
+            process,
+        )
 
     # --- loading, in the worker alone ----------------------------------------
     tracer = LoaderTracer(tree, modules)
@@ -754,16 +847,22 @@ def lint_app(text: str, file: str, modules: LocalModules | None = None,
     for node in statements_outside(tree.body):
         loaders = [call for call in calls_in(node) if tracer.call_loads(call)]
         if loaders:
-            both = node, f"{dotted(loaders[0].func)}() runs at module scope, in both the app " \
-                         f"and the worker, rather than under `if __name__ != \"__main__\":`"
+            both = (
+                node,
+                f"{dotted(loaders[0].func)}() runs at module scope, in both the app "
+                f'and the worker, rather than under `if __name__ != "__main__":`',
+            )
             break
     for node in imports_outside(tree.body) if modules is not None else []:
         for module in imported_modules(node, set(modules.trees)):
             loader = modules.loads_at_import(module)
             if loader and (both is None or node.lineno < both[0].lineno):
-                both = node, f"importing {module} runs {loader}() at module scope, in both " \
-                             f"the app and the worker. Load in a function the worker calls " \
-                             f"under `if __name__ != \"__main__\":`"
+                both = (
+                    node,
+                    f"importing {module} runs {loader}() at module scope, in both "
+                    f"the app and the worker. Load in a function the worker calls "
+                    f'under `if __name__ != "__main__":`',
+                )
     if both is not None:
         find("load-outside-worker", both[1], both[0])
 
@@ -771,9 +870,12 @@ def lint_app(text: str, file: str, modules: LocalModules | None = None,
         for node in statements_outside(guard.body, skip_guards=False):
             loaders = [call for call in calls_in(node) if tracer.call_loads(call)]
             if loaders:
-                find("load-outside-worker",
-                     f"{dotted(loaders[0].func)}() runs in the `__main__` block, in the "
-                     f"app alone, which never runs process_fn", node)
+                find(
+                    "load-outside-worker",
+                    f"{dotted(loaders[0].func)}() runs in the `__main__` block, in the "
+                    f"app alone, which never runs process_fn",
+                    node,
+                )
                 break
 
     # --- nothing loaded inside a GPU call ------------------------------------
@@ -783,85 +885,148 @@ def lint_app(text: str, file: str, modules: LocalModules | None = None,
     # --- the interface, behind the main guard --------------------------------
     def builds_interface(call):
         parts = dotted(call.func).split(".")
-        component = (parts[0] == "gr" and len(parts) == 2 and parts[1][:1].isupper()
-                     and parts[1] not in GRADIO_NON_COMPONENTS)
+        component = (
+            parts[0] == "gr"
+            and len(parts) == 2
+            and parts[1][:1].isupper()
+            and parts[1] not in GRADIO_NON_COMPONENTS
+        )
         return component or parts[-1] in ("build_endpoint", "launch")
 
-    interface = next(((node, call) for node in statements_outside(tree.body)
-                      for call in calls_in(node) if builds_interface(call)), None)
+    interface = next(
+        (
+            (node, call)
+            for node in statements_outside(tree.body)
+            for call in calls_in(node)
+            if builds_interface(call)
+        ),
+        None,
+    )
     if interface is not None:
         node, call = interface
-        find("interface-outside-main",
-             f"{dotted(call.func)}() runs at module scope, so the worker, which imports "
-             f"this file, builds it too. Move it under `if __name__ == \"__main__\":`", node)
+        find(
+            "interface-outside-main",
+            f"{dotted(call.func)}() runs at module scope, so the worker, which imports "
+            f'this file, builds it too. Move it under `if __name__ == "__main__":`',
+            node,
+        )
 
     # --- the model card, ahead of loading and process_fn ---------------------
     def card_index(body):
         for index, node in enumerate(body):
-            if isinstance(node, (ast.Assign, ast.AnnAssign)) and node.value is not None \
-                    and isinstance(node.value, ast.Call) \
-                    and dotted(node.value.func).endswith("ModelCard"):
+            if (
+                isinstance(node, (ast.Assign, ast.AnnAssign))
+                and node.value is not None
+                and isinstance(node.value, ast.Call)
+                and dotted(node.value.func).endswith("ModelCard")
+            ):
                 return index
         return None
 
     card = card_index(tree.body)
-    guarded = any(card_index(node.body) is not None
-                  for node in tree.body if is_name_guard(node, False))
+    guarded = any(
+        card_index(node.body) is not None for node in tree.body if is_name_guard(node, False)
+    )
     if card is None and guarded:
-        find("card-order", "the ModelCard is defined inside the `__main__` block rather "
-                           "than at module scope, ahead of the model loading")
+        find(
+            "card-order",
+            "the ModelCard is defined inside the `__main__` block rather "
+            "than at module scope, ahead of the model loading",
+        )
     elif card is not None:
-        process_index = next((index for index, node in enumerate(tree.body)
-                              if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-                              and node.name == process_name), None)
-        worker_index = next((index for index, node in enumerate(tree.body)
-                             if is_name_guard(node, True)), None)
-        later_than = [what for what, index in (("process_fn", process_index),
-                                               ("the model loading", worker_index))
-                      if index is not None and index < card]
+        process_index = next(
+            (
+                index
+                for index, node in enumerate(tree.body)
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name == process_name
+            ),
+            None,
+        )
+        worker_index = next(
+            (index for index, node in enumerate(tree.body) if is_name_guard(node, True)), None
+        )
+        later_than = [
+            what
+            for what, index in (("process_fn", process_index), ("the model loading", worker_index))
+            if index is not None and index < card
+        ]
         if later_than:
-            find("card-order", f"the ModelCard comes after {' and '.join(later_than)}, "
-                               f"where the guide puts it before both", tree.body[card])
+            find(
+                "card-order",
+                f"the ModelCard comes after {' and '.join(later_than)}, "
+                f"where the guide puts it before both",
+                tree.body[card],
+            )
 
     # --- show_error, the queue, and messages HARP never sees -----------------
-    launches = [call for call in ast.walk(tree)
-                if isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
-                and call.func.attr == "launch"]
+    launches = [
+        call
+        for call in ast.walk(tree)
+        if isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Attribute)
+        and call.func.attr == "launch"
+    ]
     for call in launches:
         if any(kw.arg is None for kw in call.keywords):
             continue
-        shows = any(kw.arg == "show_error" and isinstance(kw.value, ast.Constant)
-                    and kw.value.value is True for kw in call.keywords)
+        shows = any(
+            kw.arg == "show_error" and isinstance(kw.value, ast.Constant) and kw.value.value is True
+            for kw in call.keywords
+        )
         if not shows:
-            find("show-error", "launch() is not given show_error=True, so HARP receives "
-                               "no reason when a job fails with anything but a gr.Error",
-                 call)
-        ssr_off = any(kw.arg == "ssr_mode" and isinstance(kw.value, ast.Constant)
-                      and kw.value.value is False for kw in call.keywords)
+            find(
+                "show-error",
+                "launch() is not given show_error=True, so HARP receives "
+                "no reason when a job fails with anything but a gr.Error",
+                call,
+            )
+        ssr_off = any(
+            kw.arg == "ssr_mode" and isinstance(kw.value, ast.Constant) and kw.value.value is False
+            for kw in call.keywords
+        )
         if gradio_sdk and not ssr_off:
-            find("ssr-mode", "launch() leaves server-side rendering on, which Hugging Face "
-                             "turns on for a Gradio Space. Gradio checks its page through the "
-                             "Node proxy as it launches, with a three-second timeout, and a "
-                             "check that times out crashes the app. Set ssr_mode=False", call)
+            find(
+                "ssr-mode",
+                "launch() leaves server-side rendering on, which Hugging Face "
+                "turns on for a Gradio Space. Gradio checks its page through the "
+                "Node proxy as it launches, with a three-second timeout, and a "
+                "check that times out crashes the app. Set ssr_mode=False",
+                call,
+            )
 
-    if launches and not any(isinstance(call, ast.Call) and isinstance(call.func, ast.Attribute)
-                            and call.func.attr == "queue" for call in ast.walk(tree)):
-        find("queue", "demo.queue() is never called, so HARP cannot cancel a running job",
-             launches[0])
+    if launches and not any(
+        isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Attribute)
+        and call.func.attr == "queue"
+        for call in ast.walk(tree)
+    ):
+        find(
+            "queue",
+            "demo.queue() is never called, so HARP cannot cancel a running job",
+            launches[0],
+        )
 
     for node in ast.walk(tree):
         if isinstance(node, ast.Attribute) and dotted(node) in ("gr.Warning", "gr.Info"):
-            find("info-warning", f"{dotted(node)} never reaches HARP. Raise gr.Error for "
-                                 f"what a user has to know", node)
+            find(
+                "info-warning",
+                f"{dotted(node)} never reaches HARP. Raise gr.Error for what a user has to know",
+                node,
+            )
             break
 
     # --- inputs as they arrived ----------------------------------------------
     for call in input_component_calls(tree):
         if dotted(call.func) == "gr.Audio" and any(kw.arg == "format" for kw in call.keywords):
-            find("input-format", "an input gr.Audio sets format, so Gradio converts every "
-                                 "upload before process_fn sees it, which drops its "
-                                 "container and fails inside Gradio on a file it cannot "
-                                 "decode", call)
+            find(
+                "input-format",
+                "an input gr.Audio sets format, so Gradio converts every "
+                "upload before process_fn sees it, which drops its "
+                "container and fails inside Gradio on a file it cannot "
+                "decode",
+                call,
+            )
 
     return findings
 
@@ -888,13 +1053,22 @@ def lint_containers(text: str, file: str) -> list:
     except SyntaxError:
         return []
 
-    return [Finding("aiff-container", "AIFF is listed among the containers kept, but Gradio "
-                                      "converts an AIFF output to 16-bit WAV, and soundfile cannot "
-                                      "write `.aif` at all. Keep WAV and FLAC only",
-                    node.lineno, file)
-            for node in ast.walk(tree) if isinstance(node, ast.Set)
-            and any(isinstance(element, ast.Constant) and element.value in (".aiff", ".aif")
-                    for element in node.elts)]
+    return [
+        Finding(
+            "aiff-container",
+            "AIFF is listed among the containers kept, but Gradio "
+            "converts an AIFF output to 16-bit WAV, and soundfile cannot "
+            "write `.aif` at all. Keep WAV and FLAC only",
+            node.lineno,
+            file,
+        )
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Set)
+        and any(
+            isinstance(element, ast.Constant) and element.value in (".aiff", ".aif")
+            for element in node.elts
+        )
+    ]
 
 
 # What a function calls to test whether a file is already there, and so skip fetching it
@@ -925,8 +1099,12 @@ def path_key(node) -> str:
             `Path(path).exists()` and `open(path, "wb")` name the same path.
     """
 
-    while (isinstance(node, ast.Call) and len(node.args) == 1 and not node.keywords
-           and dotted(node.func).split(".")[-1] in ("str", "Path", "PurePath")):
+    while (
+        isinstance(node, ast.Call)
+        and len(node.args) == 1
+        and not node.keywords
+        and dotted(node.func).split(".")[-1] in ("str", "Path", "PurePath")
+    ):
         node = node.args[0]
 
     return ast.unparse(node)
@@ -935,9 +1113,12 @@ def path_key(node) -> str:
 def scope_calls(body: list) -> list:
     """The calls the statements of one scope make, outside any function they define."""
 
-    return [call for stmt in body
-            if not isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
-            for call in calls_in(stmt)]
+    return [
+        call
+        for stmt in body
+        if not isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        for call in calls_in(stmt)
+    ]
 
 
 def checked_paths(calls: list) -> set:
@@ -949,9 +1130,9 @@ def checked_paths(calls: list) -> set:
         if dotted(call.func).split(".")[-1] not in EXISTENCE_TESTS:
             continue
         if call.args:
-            paths.add(path_key(call.args[0]))           # os.path.exists(path)
+            paths.add(path_key(call.args[0]))  # os.path.exists(path)
         elif isinstance(call.func, ast.Attribute):
-            paths.add(path_key(call.func.value))        # path.is_file()
+            paths.add(path_key(call.func.value))  # path.is_file()
 
     return paths
 
@@ -967,8 +1148,10 @@ def final_path_writes(calls: list) -> list:
         writes (list): (call, path key, description) per write.
     """
 
-    networked = any(dotted(call.func).split(".")[-1] in NETWORK_CALLS
-                    or dotted(call.func) in NETWORK_DOTTED for call in calls)
+    networked = any(
+        dotted(call.func).split(".")[-1] in NETWORK_CALLS or dotted(call.func) in NETWORK_DOTTED
+        for call in calls
+    )
     writes = []
 
     for call in calls:
@@ -981,24 +1164,38 @@ def final_path_writes(calls: list) -> list:
         if last == "urlretrieve":
             target = keywords.get("filename", positional[1] if len(positional) > 1 else None)
             what = "urlretrieve()"
-        elif last in FETCH_METHODS and isinstance(call.func, ast.Attribute) \
-                and len(positional) == 2:
+        elif (
+            last in FETCH_METHODS and isinstance(call.func, ast.Attribute) and len(positional) == 2
+        ):
             target, what = positional[1], f"{name}()"
         elif last == "open" and networked:
             mode = keywords.get("mode", positional[1] if len(positional) > 1 else None)
-            if not (isinstance(mode, ast.Constant) and isinstance(mode.value, str)
-                    and "w" in mode.value and "b" in mode.value):
+            if not (
+                isinstance(mode, ast.Constant)
+                and isinstance(mode.value, str)
+                and "w" in mode.value
+                and "b" in mode.value
+            ):
                 continue
             if isinstance(call.func, ast.Attribute):
-                target = call.func.value                                   # path.open("wb")
+                target = call.func.value  # path.open("wb")
             else:
                 target = positional[0] if positional else keywords.get("file")
             what = 'open(..., "wb")'
-        elif last in ("run", "check_call", "call", "Popen") and positional \
-                and isinstance(positional[0], ast.List):
+        elif (
+            last in ("run", "check_call", "call", "Popen")
+            and positional
+            and isinstance(positional[0], ast.List)
+        ):
             words = positional[0].elts
-            tool = next((word.value for word in words if isinstance(word, ast.Constant)
-                         and word.value in ("wget", "curl")), None)
+            tool = next(
+                (
+                    word.value
+                    for word in words
+                    if isinstance(word, ast.Constant) and word.value in ("wget", "curl")
+                ),
+                None,
+            )
             if tool is None:
                 continue
             for index, word in enumerate(words[:-1]):
@@ -1018,10 +1215,13 @@ def moves_into_place(calls: list) -> bool:
     for call in calls:
         if dotted(call.func).split(".")[-1] not in ATOMIC_MOVES:
             continue
-        if len(call.args) == 2:                                            # os.replace(a, b)
+        if len(call.args) == 2:  # os.replace(a, b)
             return True
-        if (isinstance(call.func, ast.Attribute) and len(call.args) == 1
-                and not isinstance(call.func.value, ast.Constant)):        # partial.replace(b)
+        if (
+            isinstance(call.func, ast.Attribute)
+            and len(call.args) == 1
+            and not isinstance(call.func.value, ast.Constant)
+        ):  # partial.replace(b)
             return True
 
     return False
@@ -1051,8 +1251,11 @@ def lint_downloads(text: str, file: str) -> list:
     except SyntaxError:
         return []
 
-    functions = {node.name: node for node in ast.walk(tree)
-                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    functions = {
+        node.name: node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
 
     # The parameters each helper writes a download to, by position and name
     helper_targets = {}
@@ -1061,20 +1264,26 @@ def lint_downloads(text: str, file: str) -> list:
         if moves_into_place(calls):
             continue
         written = {key for _, key, _ in final_path_writes(calls)}
-        hits = [(index, arg.arg) for index, arg in enumerate(function.args.args)
-                if arg.arg in written]
+        hits = [
+            (index, arg.arg) for index, arg in enumerate(function.args.args) if arg.arg in written
+        ]
         if hits:
             helper_targets[name] = hits
 
     findings = []
 
     def report(call, key, what):
-        findings.append(Finding("partial-download",
-                                f"{what} writes {key} at its final path, which the check that "
-                                f"it exists then takes for complete, so a download cut short "
-                                f"is kept for every later start. Write beside it and move it "
-                                f"into place once finished, or use hf_hub_download",
-                                call.lineno, file))
+        findings.append(
+            Finding(
+                "partial-download",
+                f"{what} writes {key} at its final path, which the check that "
+                f"it exists then takes for complete, so a download cut short "
+                f"is kept for every later start. Write beside it and move it "
+                f"into place once finished, or use hf_hub_download",
+                call.lineno,
+                file,
+            )
+        )
 
     for body in [tree.body] + [function.body for function in functions.values()]:
         calls = scope_calls(body)
@@ -1086,9 +1295,11 @@ def lint_downloads(text: str, file: str) -> list:
                 report(call, key, what)
         for call in calls:
             for index, param in helper_targets.get(dotted(call.func).split(".")[-1], []):
-                argument = (call.args[index] if index < len(call.args)
-                            else next((kw.value for kw in call.keywords if kw.arg == param),
-                                      None))
+                argument = (
+                    call.args[index]
+                    if index < len(call.args)
+                    else next((kw.value for kw in call.keywords if kw.arg == param), None)
+                )
                 if argument is not None and path_key(argument) in checked:
                     report(call, path_key(argument), f"{dotted(call.func)}()")
 
@@ -1135,9 +1346,14 @@ def lint_revisions(text: str, file: str, listing: list) -> list:
         if not re.fullmatch(r"[\w.-]+/[\w.-]+", repo) or repo in directories:
             continue
         if "revision" not in keywords and None not in keywords:
-            findings.append(Finding("unpinned-revision",
-                                    f"{name}('{repo}') pins no revision, so the Space "
-                                    f"changes whenever the repository does",
-                                    call.lineno, file))
+            findings.append(
+                Finding(
+                    "unpinned-revision",
+                    f"{name}('{repo}') pins no revision, so the Space "
+                    f"changes whenever the repository does",
+                    call.lineno,
+                    file,
+                )
+            )
 
     return findings

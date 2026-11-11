@@ -30,9 +30,10 @@ from pathlib import Path
 
 from PIL import Image, ImageColor, ImageDraw, ImageFilter, ImageFont
 
-RADIUS = 32                      # macOS window corners at 2x
-MARGIN = (112, 76, 112, 148)     # left, top, right, bottom: how far the shadow reaches
-SHADOW = (36, 30, 0.45)          # sigma, downward offset, opacity
+
+RADIUS = 32  # macOS window corners at 2x
+MARGIN = (112, 76, 112, 148)  # left, top, right, bottom: how far the shadow reaches
+SHADOW = (36, 30, 0.45)  # sigma, downward offset, opacity
 
 # For annotate: the stroke and corner radius of an outline, the padding and corner radius of a tag,
 # the size of its text, and the fonts to try for it, by platform
@@ -64,8 +65,8 @@ def origin(im):
 
 
 def box(text):
-    l, t, r, b = (int(v) for v in text.split(","))
-    return l, t, r, b
+    left, top, right, bottom = (int(v) for v in text.split(","))
+    return left, top, right, bottom
 
 
 def offset(b, dx, dy):
@@ -74,14 +75,18 @@ def offset(b, dx, dy):
 
 # --- window ---------------------------------------------------------------------------------------
 
+
 def rounded_mask(size, rects, radius=RADIUS, scale=4):
     """An antialiased mask that is opaque inside the union of the rounded rects."""
     w, h = size
     m = Image.new("L", (w * scale, h * scale), 0)
     d = ImageDraw.Draw(m)
-    for l, t, r, b in rects:
-        d.rounded_rectangle((l * scale, t * scale, r * scale - 1, b * scale - 1),
-                            radius=radius * scale, fill=255)
+    for left, top, right, bottom in rects:
+        d.rounded_rectangle(
+            (left * scale, top * scale, right * scale - 1, bottom * scale - 1),
+            radius=radius * scale,
+            fill=255,
+        )
     return m.resize((w, h), Image.LANCZOS)
 
 
@@ -105,16 +110,17 @@ def window(args):
     im = load(args.capture)
     ox, oy = origin(im)
     boxes = [offset(b, ox, oy) for b in args.box]
-    l = min(b[0] for b in boxes)
-    t = min(b[1] for b in boxes)
-    r = max(b[2] for b in boxes)
-    b_ = max(b[3] for b in boxes)
-    out = im.crop((l, t, r, b_))
-    out.putalpha(rounded_mask(out.size, [offset(b, -l, -t) for b in boxes]))
+    left = min(b[0] for b in boxes)
+    top = min(b[1] for b in boxes)
+    right = max(b[2] for b in boxes)
+    bottom = max(b[3] for b in boxes)
+    out = im.crop((left, top, right, bottom))
+    out.putalpha(rounded_mask(out.size, [offset(b, -left, -top) for b in boxes]))
     save(out if args.no_shadow else with_shadow(out), args.output)
 
 
 # --- crop and stack -------------------------------------------------------------------------------
+
 
 def crop(args):
     """The box cut out of the image, or the whole image re-encoded, which shrinks a capture."""
@@ -125,8 +131,11 @@ def crop(args):
 def stack(args):
     """The images one above another, left aligned, on the color of the first top left pixel."""
     ims = [load(p) for p in args.image]
-    out = Image.new("RGBA", (max(im.size[0] for im in ims), sum(im.size[1] for im in ims)),
-                    ims[0].getpixel((0, 0)))
+    out = Image.new(
+        "RGBA",
+        (max(im.size[0] for im in ims), sum(im.size[1] for im in ims)),
+        ims[0].getpixel((0, 0)),
+    )
     y = 0
     for im in ims:
         out.paste(im, (0, y))
@@ -135,6 +144,7 @@ def stack(args):
 
 
 # --- annotate -------------------------------------------------------------------------------------
+
 
 def load_font(path):
     for p in [path] if path else FONTS:
@@ -150,21 +160,29 @@ def annotate(args):
     font = load_font(args.font)
     draw = ImageDraw.Draw(im)
     for b in args.outline:
-        l, t, r, b_ = offset(b, ox, oy)
+        left, top, right, bottom = offset(b, ox, oy)
         inset = 3
-        draw.rounded_rectangle((l + inset, t + inset, r - 1 - inset, b_ - 1 - inset),
-                               radius=OUTLINE_RADIUS, outline=color, width=STROKE)
+        draw.rounded_rectangle(
+            (left + inset, top + inset, right - 1 - inset, bottom - 1 - inset),
+            radius=OUTLINE_RADIUS,
+            outline=color,
+            width=STROKE,
+        )
     for text in args.tag:
         x, y, label = text.split(",", 2)
         x, y = int(x) + ox, int(y) + oy
-        l, t, r, b_ = font.getbbox(label)
-        draw.rounded_rectangle((x, y, x + r - l + 2 * PAD, y + b_ - t + 2 * PAD),
-                               radius=TAG_RADIUS, fill=color)
-        draw.text((x + PAD - l, y + PAD - t), label, font=font, fill=INK)
+        left, top, right, bottom = font.getbbox(label)
+        draw.rounded_rectangle(
+            (x, y, x + right - left + 2 * PAD, y + bottom - top + 2 * PAD),
+            radius=TAG_RADIUS,
+            fill=color,
+        )
+        draw.text((x + PAD - left, y + PAD - top), label, font=font, fill=INK)
     save(im, args.output)
 
 
 # --- measure --------------------------------------------------------------------------------------
+
 
 def bands(arr, color, tol, min_run):
     """Rows whose longest run of `color` is at least min_run, grouped into bands.
@@ -204,11 +222,14 @@ def measure(args):
     arr = np.asarray(Image.open(args.capture).convert("RGB")).astype(int)
     print(f"{args.capture}: runs of {color} within {args.tol}, at least {args.min_run} px wide")
     for y0, y1, x0, x1 in bands(arr, color, args.tol, args.min_run):
-        print(f"  rows {y0:5d}-{y1:5d} ({y1 - y0 + 1:4d} tall)"
-              f"  cols {x0:5d}-{x1:5d} ({x1 - x0:4d} wide)")
+        print(
+            f"  rows {y0:5d}-{y1:5d} ({y1 - y0 + 1:4d} tall)"
+            f"  cols {x0:5d}-{x1:5d} ({x1 - x0:4d} wide)"
+        )
 
 
 # --- Command line ---------------------------------------------------------------------------------
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
