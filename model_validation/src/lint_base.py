@@ -7,14 +7,7 @@ what the lint reads from one Space.
 import dataclasses
 
 
-__all__ = [
-    'ERROR',
-    'WARNING',
-    'RULES',
-    'DEPLOYMENT_GUIDE',
-    'Finding',
-    'SpaceFiles'
-]
+__all__ = ["ERROR", "WARNING", "RULES", "DEPLOYMENT_GUIDE", "Finding", "SpaceFiles"]
 
 
 ERROR, WARNING = "error", "warning"
@@ -67,8 +60,8 @@ class Finding:
     line: int | None = None
     file: str = ""
     severity: str = dataclasses.field(init=False)
-                                     # ERROR fails the Space, WARNING is only
-                                     # reported (see RULES)
+    # ERROR fails the Space, WARNING is only
+    # reported (see RULES)
 
     def __post_init__(self):
         self.severity = RULES[self.rule][0]
@@ -94,15 +87,15 @@ class SpaceFiles:
     """What the lint reads from one Space."""
 
     space_id: str
-    sdk: str = "gradio"              # "gradio" or "docker"
+    sdk: str = "gradio"  # "gradio" or "docker"
     sdk_version: str = ""
-    python_version: str = ""         # as the README sets it, or empty
+    python_version: str = ""  # as the README sets it, or empty
     hardware: str = ""
     app_file: str = "app.py"
     files: dict = dataclasses.field(default_factory=dict)
-                                     # name -> text, for the files read
+    # name -> text, for the files read
     listing: list = dataclasses.field(default_factory=list)
-                                     # every path in the repository
+    # every path in the repository
 
     @property
     def zerogpu(self) -> bool:

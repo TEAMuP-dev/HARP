@@ -10,10 +10,7 @@ dependency.
 import mido
 
 
-__all__ = [
-    'read_midi_props',
-    'note_voices'
-]
+__all__ = ["read_midi_props", "note_voices"]
 
 
 def read_midi_props(label: str, path: str) -> dict:
@@ -39,8 +36,9 @@ def read_midi_props(label: str, path: str) -> dict:
     except Exception as exc:  # noqa: BLE001 - any parse failure
         raise AssertionError(f"output '{label}' could not be parsed as MIDI: {exc}")
 
-    num_notes = sum(1 for track in midi.tracks for msg in track
-                    if msg.type == "note_on" and msg.velocity > 0)
+    num_notes = sum(
+        1 for track in midi.tracks for msg in track if msg.type == "note_on" and msg.velocity > 0
+    )
 
     try:
         duration = midi.length

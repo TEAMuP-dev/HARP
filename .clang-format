@@ -54,20 +54,21 @@ SpacesInCStyleCastParentheses: false
 SpacesInContainerLiterals: true
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
-Standard: "c++17"
+Standard: c++20
 TabWidth: 4
 UseTab: Never
 ---
 Language: ObjC
 BasedOnStyle: Chromium
-AlignTrailingComments: true
+AlignTrailingComments: false
 BreakBeforeBraces: Allman
-ColumnLimit: 0
+ColumnLimit: 100
 IndentWidth: 4
 KeepEmptyLinesAtTheStartOfBlocks: false
 ObjCSpaceAfterProperty: true
 ObjCSpaceBeforeProtocolList: true
 PointerAlignment: Left
+SpaceAfterLogicalNot: true
 SpacesBeforeTrailingComments: 1
 TabWidth: 4
 UseTab: Never

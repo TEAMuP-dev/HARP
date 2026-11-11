@@ -1,0 +1,21 @@
+# Formatting and lint rules for the Python in this repository, which is mostly the model
+# validation harness. pyharp is a submodule with a ruff.toml of its own. See docs/DEVELOPING.md.
+
+line-length = 100
+target-version = "py310"
+# Code blocks in Markdown are fragments, which a formatter reads as whole statements
+extend-exclude = ["JUCE", "pyharp", "website", "*.md"]
+
+# The harness modules and packages import one another from src/, which is on the path
+src = ["model_validation/src"]
+
+[lint]
+# pycodestyle, Pyflakes, and import sorting
+select = ["E", "F", "W", "I"]
+
+[lint.isort]
+lines-after-imports = 2
+
+[lint.per-file-ignores]
+# dmgbuild runs this file with "defines" already in scope
+"packaging/dmg_settings.py" = ["F821"]

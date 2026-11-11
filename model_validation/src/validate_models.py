@@ -44,17 +44,28 @@ from pathlib import Path
 from assets import Assets, check_synthesized_inputs
 from examples import test_local_example
 from lint import ERROR, check_lint_exceptions, find_uv, lint_space
-from spaces import test_space
 from quota import ZeroGPUTracker
 from results import FAIL, status_emoji, write_reports
-from utils import (get_token, check_token, scrub, load_config, check_config_keys,
-                   check_config_values, check_model_names, qualify, qualify_keys,
-                   Exclusions, get_excluded, discover_spaces)
+from spaces import test_space
+from utils import (
+    Exclusions,
+    check_config_keys,
+    check_config_values,
+    check_model_names,
+    check_token,
+    discover_spaces,
+    get_excluded,
+    get_token,
+    load_config,
+    qualify,
+    qualify_keys,
+    scrub,
+)
 
 
 DEFAULT_ORG = "teamup-tech"
-SCRIPT_DIR = Path(__file__).parent            # model_validation/src
-MODEL_VALIDATION_DIR = SCRIPT_DIR.parent      # model_validation
+SCRIPT_DIR = Path(__file__).parent  # model_validation/src
+MODEL_VALIDATION_DIR = SCRIPT_DIR.parent  # model_validation
 REPO_ROOT = MODEL_VALIDATION_DIR.parent
 DEFAULT_CONFIG = MODEL_VALIDATION_DIR / "config.yml"
 DEFAULT_EXAMPLES_DIR = REPO_ROOT / "pyharp" / "examples"
@@ -75,67 +86,126 @@ def parse_args() -> argparse.Namespace:
     """
 
     parser = argparse.ArgumentParser(description="Validate HARP model deployments.")
-    parser.add_argument("--org", default=DEFAULT_ORG,
-                        help=f"HF organization whose spaces are discovered, and "
-                             f"the owner a bare space name is taken to have "
-                             f"(default: {DEFAULT_ORG})")
-    parser.add_argument("--spaces", nargs="*", default=None,
-                        help="Explicit spaces to validate, skipping discovery. A "
-                             "bare name is taken to be in --org. Give 'owner/name' "
-                             "to reach another organization")
-    parser.add_argument("--exclude", nargs="*", default=None, metavar="MODEL",
-                        help="Models to exclude, in either tier. A bare name means "
-                             "the model in the tier being run. Qualify it "
-                             "('owner/name' or 'examples/<dir>') to pin it to one. "
-                             "Merged with the config `exclude` list")
-    parser.add_argument("--local-examples", nargs="*", default=None, metavar="DIR",
-                        help="Validate local pyharp example apps instead of remote "
-                             "spaces. Name them by directory ('pitch_shifter' or "
-                             "'examples/pitch_shifter'), or give a path to an example "
-                             "kept elsewhere. With none given, every app under "
-                             "pyharp/examples/ is validated")
-    parser.add_argument("--lint", action="store_true",
-                        help="Check each Space's files against docs/DEPLOYMENT.md "
-                             "instead of running it. Spends no ZeroGPU allowance and "
-                             "wakes nothing. Selects Spaces like a spaces run")
-    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG,
-                        help="Optional YAML config (excludes, per-model overrides/cases)")
-    parser.add_argument("--load-only", action="store_true",
-                        help="Only verify availability and /controls, do not run inference")
-    parser.add_argument("--cases", nargs="+", default=None, metavar="NAME",
-                        help="Run only the test cases with these names, a common case "
-                             "named with or without its 'common:' prefix, e.g. to run "
-                             "the refusals alone, which spend no ZeroGPU allowance on a "
-                             "model refusing as it should")
-    parser.add_argument("--skip-zerogpu", action="store_true",
-                        help="Skip models on ZeroGPU hardware, to avoid spending "
-                             "the shared ZeroGPU allowance")
-    parser.add_argument("--restart-failed", action=argparse.BooleanOptionalAction,
-                        default=True,
-                        help="Attempt to restart spaces found in an error or stopped "
-                             "state. Enabled by default, and requires a token with "
-                             "write access. Disable with --no-restart-failed")
-    parser.add_argument("--workers", type=int, default=4,
-                        help="Number of spaces to validate concurrently (spaces tier only)")
-    parser.add_argument("--zerogpu-workers", type=int, default=1,
-                        help="How many ZeroGPU models may make GPU calls at once. "
-                             "Each concurrent call reserves its declared duration, "
-                             "so 1 (the default) keeps overlapping reservations "
-                             "from tying up the allowance")
-    parser.add_argument("--connect-timeout", type=float, default=420,
-                        help="Seconds to wait for a deployment to build, wake, "
-                             "or start (default: 420)")
-    parser.add_argument("--process-timeout", type=float, default=600,
-                        help="Seconds to wait for /process on non-ZeroGPU "
-                             "models (default: 600)")
-    parser.add_argument("--zerogpu-process-timeout", type=float, default=120,
-                        help="Seconds allowed for /process EXECUTION on ZeroGPU "
-                             "models once they leave the queue, with the queue "
-                             "wait bounded separately by --connect-timeout "
-                             "(default: 120)")
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR,
-                        help=f"Directory for reports, synthesized assets, and "
-                             f"example logs (default: {DEFAULT_OUTPUT_DIR})")
+    parser.add_argument(
+        "--org",
+        default=DEFAULT_ORG,
+        help=f"HF organization whose spaces are discovered, and "
+        f"the owner a bare space name is taken to have "
+        f"(default: {DEFAULT_ORG})",
+    )
+    parser.add_argument(
+        "--spaces",
+        nargs="*",
+        default=None,
+        help="Explicit spaces to validate, skipping discovery. A "
+        "bare name is taken to be in --org. Give 'owner/name' "
+        "to reach another organization",
+    )
+    parser.add_argument(
+        "--exclude",
+        nargs="*",
+        default=None,
+        metavar="MODEL",
+        help="Models to exclude, in either tier. A bare name means "
+        "the model in the tier being run. Qualify it "
+        "('owner/name' or 'examples/<dir>') to pin it to one. "
+        "Merged with the config `exclude` list",
+    )
+    parser.add_argument(
+        "--local-examples",
+        nargs="*",
+        default=None,
+        metavar="DIR",
+        help="Validate local pyharp example apps instead of remote "
+        "spaces. Name them by directory ('pitch_shifter' or "
+        "'examples/pitch_shifter'), or give a path to an example "
+        "kept elsewhere. With none given, every app under "
+        "pyharp/examples/ is validated",
+    )
+    parser.add_argument(
+        "--lint",
+        action="store_true",
+        help="Check each Space's files against docs/DEPLOYMENT.md "
+        "instead of running it. Spends no ZeroGPU allowance and "
+        "wakes nothing. Selects Spaces like a spaces run",
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=DEFAULT_CONFIG,
+        help="Optional YAML config (excludes, per-model overrides/cases)",
+    )
+    parser.add_argument(
+        "--load-only",
+        action="store_true",
+        help="Only verify availability and /controls, do not run inference",
+    )
+    parser.add_argument(
+        "--cases",
+        nargs="+",
+        default=None,
+        metavar="NAME",
+        help="Run only the test cases with these names, a common case "
+        "named with or without its 'common:' prefix, e.g. to run "
+        "the refusals alone, which spend no ZeroGPU allowance on a "
+        "model refusing as it should",
+    )
+    parser.add_argument(
+        "--skip-zerogpu",
+        action="store_true",
+        help="Skip models on ZeroGPU hardware, to avoid spending the shared ZeroGPU allowance",
+    )
+    parser.add_argument(
+        "--restart-failed",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Attempt to restart spaces found in an error or stopped "
+        "state. Enabled by default, and requires a token with "
+        "write access. Disable with --no-restart-failed",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=4,
+        help="Number of spaces to validate concurrently (spaces tier only)",
+    )
+    parser.add_argument(
+        "--zerogpu-workers",
+        type=int,
+        default=1,
+        help="How many ZeroGPU models may make GPU calls at once. "
+        "Each concurrent call reserves its declared duration, "
+        "so 1 (the default) keeps overlapping reservations "
+        "from tying up the allowance",
+    )
+    parser.add_argument(
+        "--connect-timeout",
+        type=float,
+        default=420,
+        help="Seconds to wait for a deployment to build, wake, or start (default: 420)",
+    )
+    parser.add_argument(
+        "--process-timeout",
+        type=float,
+        default=600,
+        help="Seconds to wait for /process on non-ZeroGPU models (default: 600)",
+    )
+    parser.add_argument(
+        "--zerogpu-process-timeout",
+        type=float,
+        default=120,
+        help="Seconds allowed for /process EXECUTION on ZeroGPU "
+        "models once they leave the queue, with the queue "
+        "wait bounded separately by --connect-timeout "
+        "(default: 120)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=DEFAULT_OUTPUT_DIR,
+        help=f"Directory for reports, synthesized assets, and "
+        f"example logs (default: {DEFAULT_OUTPUT_DIR})",
+    )
     parser.add_argument("--verbose", action="store_true")
 
     return parser.parse_args()
@@ -163,8 +233,10 @@ def result_line(result, extra: str = "", token: str = "") -> str:
         error = error[:CONSOLE_ERROR_CHARS] + " […]"
     note = f" - {error}" if error else ""
 
-    return (f"{status_emoji(result)} {result.status:4s} {result.target} "
-            f"({result.duration}s){extra}{scrub(note, token)}")
+    return (
+        f"{status_emoji(result)} {result.status:4s} {result.target} "
+        f"({result.duration}s){extra}{scrub(note, token)}"
+    )
 
 
 def resolve_example_dir(name: str) -> Path:
@@ -204,16 +276,21 @@ def report_unused_overrides(overrides: dict, selected: list, exclusions: Exclusi
             to apply to nothing.
     """
 
-    unused = sorted(model for model in overrides
-                    if model not in selected and not exclusions.excludes(model))
+    unused = sorted(
+        model for model in overrides if model not in selected and not exclusions.excludes(model)
+    )
 
     if unused:
-        print(f"WARNING: config.yml configures {', '.join(unused)}, which the run did not "
-              f"find, so those settings apply to nothing", file=sys.stderr)
+        print(
+            f"WARNING: config.yml configures {', '.join(unused)}, which the run did not "
+            f"find, so those settings apply to nothing",
+            file=sys.stderr,
+        )
 
 
-def validate_examples(opts: argparse.Namespace, config: dict,
-                      exclusions: Exclusions, assets: Assets) -> list:
+def validate_examples(
+    opts: argparse.Namespace, config: dict, exclusions: Exclusions, assets: Assets
+) -> list:
     """
     Run the examples tier: launch and validate each local pyharp example.
 
@@ -240,40 +317,43 @@ def validate_examples(opts: argparse.Namespace, config: dict,
         # not a broken model, so report it as such rather than failing it
         unresolved = [d for d in app_dirs if not (d / "app.py").exists()]
         if unresolved:
-            print("ERROR: no app.py in " +
-                  ", ".join(str(d) for d in unresolved), file=sys.stderr)
+            print("ERROR: no app.py in " + ", ".join(str(d) for d in unresolved), file=sys.stderr)
             return None
     elif DEFAULT_EXAMPLES_DIR.is_dir():
-        app_dirs = sorted(d for d in DEFAULT_EXAMPLES_DIR.iterdir()
-                          if (d / "app.py").exists())
+        app_dirs = sorted(d for d in DEFAULT_EXAMPLES_DIR.iterdir() if (d / "app.py").exists())
     else:
-        print(f"ERROR: {DEFAULT_EXAMPLES_DIR} does not exist. Check out the "
-              f"pyharp submodule (git submodule update --init)", file=sys.stderr)
+        print(
+            f"ERROR: {DEFAULT_EXAMPLES_DIR} does not exist. Check out the "
+            f"pyharp submodule (git submodule update --init)",
+            file=sys.stderr,
+        )
         return None
-    app_dirs = [d for d in app_dirs
-                if not exclusions.excludes(f"examples/{d.name}", named)]
+    app_dirs = [d for d in app_dirs if not exclusions.excludes(f"examples/{d.name}", named)]
 
     if not app_dirs:
         print("ERROR: no local examples found", file=sys.stderr)
         return None
     if not named:
-        report_unused_overrides(overrides, [f"examples/{d.name}" for d in app_dirs],
-                                exclusions)
+        report_unused_overrides(overrides, [f"examples/{d.name}" for d in app_dirs], exclusions)
 
     print(f"Validating {len(app_dirs)} pyharp examples\n")
 
     results = []
     for i, app_dir in enumerate(app_dirs):
-        r = test_local_example(app_dir, LOCAL_PORT_BASE + i, assets, opts,
-                               overrides.get(f"examples/{app_dir.name}", {}))
+        r = test_local_example(
+            app_dir,
+            LOCAL_PORT_BASE + i,
+            assets,
+            opts,
+            overrides.get(f"examples/{app_dir.name}", {}),
+        )
         results.append(r)
         print(result_line(r))
 
     return results
 
 
-def select_spaces(api, opts: argparse.Namespace, config: dict,
-                  exclusions: Exclusions) -> list:
+def select_spaces(api, opts: argparse.Namespace, config: dict, exclusions: Exclusions) -> list:
     """
     The Spaces a spaces or lint run covers: those named, or else those found.
 
@@ -289,8 +369,11 @@ def select_spaces(api, opts: argparse.Namespace, config: dict,
 
     if opts.spaces:
         # Spaces named here are exempt from a config exclusion
-        return [s for s in (qualify(s, opts.org) for s in opts.spaces)
-                if not exclusions.excludes(s, named=True)]
+        return [
+            s
+            for s in (qualify(s, opts.org) for s in opts.spaces)
+            if not exclusions.excludes(s, named=True)
+        ]
 
     space_ids = discover_spaces(api, opts.org, config, exclusions)
     report_unused_overrides(config.get("overrides", {}), space_ids, exclusions)
@@ -298,8 +381,9 @@ def select_spaces(api, opts: argparse.Namespace, config: dict,
     return space_ids
 
 
-def validate_lint(opts: argparse.Namespace, config: dict,
-                  exclusions: Exclusions, token: str) -> list:
+def validate_lint(
+    opts: argparse.Namespace, config: dict, exclusions: Exclusions, token: str
+) -> list:
     """
     Run the lint tier: check each Space's files against docs/DEPLOYMENT.md.
 
@@ -318,9 +402,11 @@ def validate_lint(opts: argparse.Namespace, config: dict,
 
     uv = find_uv()
     if uv is None:
-        print("ERROR: the lint resolves each Space's requirements with uv, which is not "
-              "installed. Run pip install -r model_validation/requirements.txt",
-              file=sys.stderr)
+        print(
+            "ERROR: the lint resolves each Space's requirements with uv, which is not "
+            "installed. Run pip install -r model_validation/requirements.txt",
+            file=sys.stderr,
+        )
         return None
 
     overrides = config.get("overrides", {})
@@ -335,8 +421,9 @@ def validate_lint(opts: argparse.Namespace, config: dict,
 
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=opts.workers) as pool:
-        futures = [pool.submit(lint_space, api, sid, overrides.get(sid, {}), uv)
-                   for sid in space_ids]
+        futures = [
+            pool.submit(lint_space, api, sid, overrides.get(sid, {}), uv) for sid in space_ids
+        ]
         for future in concurrent.futures.as_completed(futures):
             r = future.result()
             results.append(r)
@@ -347,8 +434,9 @@ def validate_lint(opts: argparse.Namespace, config: dict,
     return results
 
 
-def validate_spaces(opts: argparse.Namespace, config: dict,
-                    exclusions: Exclusions, assets: Assets, token: str) -> list:
+def validate_spaces(
+    opts: argparse.Namespace, config: dict, exclusions: Exclusions, assets: Assets, token: str
+) -> list:
     """
     Run the spaces tier: validate remote Hugging Face Spaces concurrently.
 
@@ -376,15 +464,27 @@ def validate_spaces(opts: argparse.Namespace, config: dict,
     tracker = ZeroGPUTracker()
     quota_exhausted = threading.Event()
     zerogpu_limiter = threading.Semaphore(max(1, opts.zerogpu_workers))
-    print(f"Validating {len(space_ids)} spaces with {opts.workers} workers "
-          f"({opts.zerogpu_workers} concurrent on ZeroGPU, "
-          f"process test: {'OFF' if opts.load_only else 'ON'})\n")
+    print(
+        f"Validating {len(space_ids)} spaces with {opts.workers} workers "
+        f"({opts.zerogpu_workers} concurrent on ZeroGPU, "
+        f"process test: {'OFF' if opts.load_only else 'ON'})\n"
+    )
 
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=opts.workers) as pool:
-        futures = [pool.submit(test_space, sid, token, assets, opts,
-                               overrides.get(sid, {}), quota_exhausted, zerogpu_limiter)
-                   for sid in space_ids]
+        futures = [
+            pool.submit(
+                test_space,
+                sid,
+                token,
+                assets,
+                opts,
+                overrides.get(sid, {}),
+                quota_exhausted,
+                zerogpu_limiter,
+            )
+            for sid in space_ids
+        ]
         for future in concurrent.futures.as_completed(futures):
             r = future.result()
             results.append(r)
@@ -395,8 +495,7 @@ def validate_spaces(opts: argparse.Namespace, config: dict,
             info = r.hardware or "?"
             if r.zerogpu:
                 ran = [c for c in r.cases if c.gpu_calls]
-                tracker.add(sum(c.gpu_calls for c in ran),
-                            sum(c.duration for c in ran))
+                tracker.add(sum(c.gpu_calls for c in ran), sum(c.duration for c in ran))
                 info = f"{info} | {tracker.summary()}"
             print(result_line(r, f" [{info}]", token))
 
@@ -418,8 +517,10 @@ def main() -> int:
 
     examples_tier = opts.local_examples is not None
     if examples_tier and opts.lint:
-        print("ERROR: --lint checks Spaces, so it does not combine with --local-examples",
-              file=sys.stderr)
+        print(
+            "ERROR: --lint checks Spaces, so it does not combine with --local-examples",
+            file=sys.stderr,
+        )
         return 2
 
     try:
@@ -449,8 +550,9 @@ def main() -> int:
     # used for the directory name (on a UTC CI runner this is naturally UTC).
     run_stamp = time.strftime("%Y-%m-%dT%H-%M-%S", time.localtime())
     opts.output_dir = opts.output_dir / run_stamp
-    assets = Assets(opts.output_dir / "assets",
-                    config.get("synthesized_inputs"), opts.config.parent)
+    assets = Assets(
+        opts.output_dir / "assets", config.get("synthesized_inputs"), opts.config.parent
+    )
 
     if examples_tier:
         token = ""
@@ -461,8 +563,11 @@ def main() -> int:
         # The lint only reads, so it never needs to restart anything.
         if not check_token(token, opts.org, opts.restart_failed and not opts.lint):
             return 2
-        results = (validate_lint(opts, config, exclusions, token) if opts.lint
-                   else validate_spaces(opts, config, exclusions, assets, token))
+        results = (
+            validate_lint(opts, config, exclusions, token)
+            if opts.lint
+            else validate_spaces(opts, config, exclusions, assets, token)
+        )
 
     if results is None:
         return 2

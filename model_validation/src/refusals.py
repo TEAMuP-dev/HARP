@@ -19,11 +19,7 @@ import gradio_client.client
 from gradio_client.exceptions import AppError
 
 
-__all__ = [
-    'DeclaredAppError',
-    'install',
-    'judge_refusal'
-]
+__all__ = ["DeclaredAppError", "install", "judge_refusal"]
 
 
 # The titles of the errors raised by ZeroGPU and by pyharp itself rather than
@@ -96,8 +92,14 @@ def judge_refusal(exc: Exception, expected) -> tuple:
     """
 
     if isinstance(exc, TimeoutError):
-        return False, (f"no refusal arrived ({exc}), so the model went on to process "
-                       f"an input it should refuse"), True
+        return (
+            False,
+            (
+                f"no refusal arrived ({exc}), so the model went on to process "
+                f"an input it should refuse"
+            ),
+            True,
+        )
 
     if not isinstance(exc, AppError):
         return False, f"/process failed rather than refusing: {type(exc).__name__}: {exc}", True
@@ -108,22 +110,40 @@ def judge_refusal(exc: Exception, expected) -> tuple:
 
     if fields is not None and "title" not in fields:
         shown = f"'{message}'" if message else "no message at all"
-        return False, (f"refused only by an uncaught exception, which reaches HARP as "
-                       f"{shown} rather than a gr.Error saying what was wrong"), False
+        return (
+            False,
+            (
+                f"refused only by an uncaught exception, which reaches HARP as "
+                f"{shown} rather than a gr.Error saying what was wrong"
+            ),
+            False,
+        )
 
     if title.startswith(INFRASTRUCTURE_TITLES):
-        return False, (f"failed in ZeroGPU ({title}: {message}) rather than being refused "
-                       f"before the GPU was reserved"), True
+        return (
+            False,
+            (
+                f"failed in ZeroGPU ({title}: {message}) rather than being refused "
+                f"before the GPU was reserved"
+            ),
+            True,
+        )
 
     if title in PYHARP_TITLES:
         return False, f"failed in pyharp ({title}: {message}) rather than being refused", True
 
     if not message or is_bare_type_name(message):
-        return False, (f"refused with a gr.Error that says nothing a user can act on: "
-                       f"'{message}'"), False
+        return (
+            False,
+            (f"refused with a gr.Error that says nothing a user can act on: '{message}'"),
+            False,
+        )
 
     if isinstance(expected, str) and expected.lower() not in message.lower():
-        return False, (f"refused, but the message does not mention '{expected}': "
-                       f"'{message}'"), False
+        return (
+            False,
+            (f"refused, but the message does not mention '{expected}': '{message}'"),
+            False,
+        )
 
     return True, "", False
