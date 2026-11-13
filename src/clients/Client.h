@@ -105,14 +105,13 @@ inline OpResult stringJSONToDict(const String& stringJSON, DynamicObject::Ptr& d
         return result;
     }
 
-    if (! data.isObject())
+    // JUCE counts an array as an object too, so only the pointer tells a dictionary apart
+    if (data.getDynamicObject() == nullptr)
     {
         return OpResult::fail(JsonError { JsonError::Type::NotADictionary, stringJSON });
     }
 
     dict = data.getDynamicObject();
-
-    jassert(dict != nullptr);
 
     return OpResult::ok();
 }
@@ -156,14 +155,13 @@ inline OpResult getRequiredDictProperty(DynamicObject::Ptr& parentDict,
 
     const var& value = parentDict->getProperty(key);
 
-    if (! value.isObject())
+    // JUCE counts an array as an object too, so only the pointer tells a dictionary apart
+    if (value.getDynamicObject() == nullptr)
     {
         return OpResult::fail(JsonError { JsonError::Type::NotADictionary, value.toString() });
     }
 
     outDict = value.getDynamicObject();
-
-    jassert(outDict != nullptr);
 
     return OpResult::ok();
 }
@@ -194,6 +192,34 @@ inline OpResult getRequiredArrayProperty(DynamicObject::Ptr& parentDict,
     outArray = value.getArray();
 
     return OpResult::ok();
+}
+
+// The number under a key of a dictionary, or nothing if the key holds anything else
+inline std::optional<float> getOptionalNumberProperty(const DynamicObject& dict,
+                                                      const Identifier& key)
+{
+    const var& value = dict.getProperty(key);
+
+    if (value.isInt() || value.isInt64() || value.isDouble())
+    {
+        return static_cast<float>(static_cast<double>(value));
+    }
+
+    return {};
+}
+
+// The string under a key of a dictionary, or nothing if the key holds anything else
+inline std::optional<String> getOptionalStringProperty(const DynamicObject& dict,
+                                                       const Identifier& key)
+{
+    const var& value = dict.getProperty(key);
+
+    if (value.isString())
+    {
+        return value.toString();
+    }
+
+    return {};
 }
 
 /*
