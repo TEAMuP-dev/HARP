@@ -210,7 +210,7 @@ element along with it.
 - Use submodules for external dependencies that work out-of-the-box.
 - Organize external code with clear boundaries (_i.e._ `external/`) and treat it as read-only.
 - Do not modify third-party code unless absolutely necessary. Wrap it instead.
-- Credit third-party code in [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md), and in the `About
+- Credit third-party code in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and in the `About
   HARP` window as well if its license asks for attribution in the product.
 - Only include what is needed in build targets, and avoid leaking dependencies globally.
 

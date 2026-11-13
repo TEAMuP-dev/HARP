@@ -50,7 +50,7 @@ public:
 
         addLink(noticesLink,
                 "Read the third-party notices",
-                "https://github.com/TEAMuP-dev/HARP/blob/main/THIRD_PARTY_NOTICES.md");
+                "https://github.com/TEAMuP-dev/HARP/blob/main/docs/THIRD_PARTY_NOTICES.md");
 
         copyrightLabel.setText(APP_COPYRIGHT, dontSendNotification);
         copyrightLabel.setFont(ModelStyle::font(12.0f));

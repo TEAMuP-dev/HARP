@@ -1,7 +1,7 @@
 # Third-Party Notices
 
-HARP is released under the [BSD 3-Clause License](LICENSE). It builds on the work listed below, each
-part of which remains under its own license. The code under `src/external/` is kept as it was
+HARP is released under the [BSD 3-Clause License](../LICENSE). It builds on the work listed below,
+each part of which remains under its own license. The code under `src/external/` is kept as it was
 received, so the attribution it calls for is given here and in the `About HARP` window of the app.
 
 ## Bundled with the App
@@ -30,4 +30,4 @@ jpeglib, HarfBuzz, and SheenBidi. `JUCE/LICENSE.md` lists them with their licens
 Vendored code goes under `src/external/` unmodified, and its attribution goes here. A work that asks
 for attribution in the product itself, as CC BY does, is also named in the `About HARP` window
 (`src/windows/AboutWindow.h`). The media in the demo package is credited in
-[docs/DEMO_FILES.md](docs/DEMO_FILES.md), and each hosted model carries its own license on its card.
+[DEMO_FILES.md](DEMO_FILES.md), and each hosted model carries its own license on its card.
