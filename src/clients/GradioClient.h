@@ -1406,6 +1406,43 @@ private:
                               modelPath);
     }
 
+    /* The label a "label_type" declares, with whatever is particular to that type filled
+       in, or nullptr for a type HARP does not know */
+    static std::unique_ptr<OutputLabel> createLabel(const String& labelType,
+                                                    const DynamicObject& labelObject)
+    {
+        if (labelType == "AudioLabel")
+        {
+            auto audioLabel = std::make_unique<AudioLabel>();
+            audioLabel->amplitude = getOptionalNumberProperty(labelObject, "amplitude");
+
+            return audioLabel;
+        }
+
+        if (labelType == "SpectrogramLabel")
+        {
+            auto spectrogramLabel = std::make_unique<SpectrogramLabel>();
+            spectrogramLabel->frequency = getOptionalNumberProperty(labelObject, "frequency");
+
+            return spectrogramLabel;
+        }
+
+        if (labelType == "MidiLabel")
+        {
+            auto midiLabel = std::make_unique<MidiLabel>();
+            midiLabel->pitch = getOptionalNumberProperty(labelObject, "pitch");
+
+            return midiLabel;
+        }
+
+        if (labelType == "OutputLabel")
+        {
+            return std::make_unique<OutputLabel>();
+        }
+
+        return nullptr;
+    }
+
     OpResult extractLabels(DynamicObject::Ptr& output, LabelList& labels)
     {
         static const Identifier labelsKey { "labels" };
@@ -1419,9 +1456,9 @@ private:
             return result;
         }
 
-        for (int i = 0; i < labelObjects->size(); i++)
+        for (const auto& labelVar : *labelObjects)
         {
-            DynamicObject* labelObject = labelObjects->getReference(i).getDynamicObject();
+            const DynamicObject* labelObject = labelVar.getDynamicObject();
 
             if (labelObject == nullptr)
             {
@@ -1431,76 +1468,11 @@ private:
                 continue;
             }
 
-            String labelType = labelObject->getProperty("label_type").toString();
+            const String labelType = labelObject->getProperty("label_type").toString();
 
-            std::unique_ptr<OutputLabel> label;
+            std::unique_ptr<OutputLabel> label = createLabel(labelType, *labelObject);
 
-            String labelLogMessage = "GradioClient::extractLabels: Extracted label of type \"";
-
-            /* Cast to given label type */
-
-            if (labelType == "AudioLabel")
-            {
-                labelLogMessage += "AudioLabel";
-
-                auto audioLabel = std::make_unique<AudioLabel>();
-
-                if (labelObject->hasProperty("amplitude"))
-                {
-                    if (labelObject->getProperty("amplitude").isDouble()
-                        || labelObject->getProperty("amplitude").isInt())
-                    {
-                        audioLabel->amplitude =
-                            static_cast<float>(labelObject->getProperty("amplitude"));
-                    }
-                }
-
-                label = std::move(audioLabel);
-            }
-            else if (labelType == "SpectrogramLabel")
-            {
-                labelLogMessage += "SpectrogramLabel";
-
-                auto spectrogramLabel = std::make_unique<SpectrogramLabel>();
-
-                if (labelObject->hasProperty("frequency"))
-                {
-                    if (labelObject->getProperty("frequency").isDouble()
-                        || labelObject->getProperty("frequency").isInt())
-                    {
-                        spectrogramLabel->frequency =
-                            static_cast<float>(labelObject->getProperty("frequency"));
-                    }
-                }
-
-                label = std::move(spectrogramLabel);
-            }
-            else if (labelType == "MidiLabel")
-            {
-                labelLogMessage += "MidiLabel";
-
-                auto midiLabel = std::make_unique<MidiLabel>();
-
-                if (labelObject->hasProperty("pitch"))
-                {
-                    if (labelObject->getProperty("pitch").isDouble()
-                        || labelObject->getProperty("pitch").isInt())
-                    {
-                        midiLabel->pitch = static_cast<float>(labelObject->getProperty("pitch"));
-                    }
-                }
-
-                label = std::move(midiLabel);
-            }
-            else if (labelType == "OutputLabel")
-            {
-                labelLogMessage += "OutputLabel";
-
-                auto outputLabel = std::make_unique<OutputLabel>();
-
-                label = std::move(outputLabel);
-            }
-            else
+            if (label == nullptr)
             {
                 // Possibly from a newer pyharp, so it is left out rather than failing
                 DBG_AND_LOG("GradioClient::extractLabels: Ignoring label of unknown type \""
@@ -1509,86 +1481,27 @@ private:
                 continue;
             }
 
-            labelLogMessage += "\" with time \"";
+            /* The fields every label has. One that is missing, or is not of the type it should
+               be, leaves the label as it is. */
+            label->t = getOptionalNumberProperty(*labelObject, "t").value_or(label->t);
+            label->label = getOptionalStringProperty(*labelObject, "label").value_or(label->label);
+            label->duration = getOptionalNumberProperty(*labelObject, "duration");
+            label->description = getOptionalStringProperty(*labelObject, "description");
+            label->link = getOptionalStringProperty(*labelObject, "link");
 
-            /* Fill all provided struct properties */
-
-            if (labelObject->hasProperty("t"))
+            // A color of zero stands for none
+            if (const var& color = labelObject->getProperty("color");
+                (color.isInt() || color.isInt64()) && static_cast<int>(color) != 0)
             {
-                // Make sure time was provided as a float
-                if (labelObject->getProperty("t").isDouble()
-                    || labelObject->getProperty("t").isInt())
-                {
-                    label->t = static_cast<float>(labelObject->getProperty("t"));
-
-                    labelLogMessage += String(label->t);
-                }
+                label->color = static_cast<int>(color);
             }
 
-            labelLogMessage += "\" and label \"";
-
-            if (labelObject->hasProperty("label"))
-            {
-                // Make sure label was provided as a string
-                if (labelObject->getProperty("label").isString())
-                {
-                    label->label = labelObject->getProperty("label").toString();
-
-                    labelLogMessage += label->label;
-                }
-            }
-
-            labelLogMessage += "\".";
-
-            if (labelType == "SpectrogramLabel")
-            {
-                labelLogMessage += " WARNING: HARP does not yet support spectrogram visualization.";
-            }
-
-            DBG_AND_LOG(labelLogMessage);
-
-            if (labelObject->hasProperty("duration"))
-            {
-                // Make sure duration was provided as a float
-                if (labelObject->getProperty("duration").isDouble()
-                    || labelObject->getProperty("duration").isInt())
-                {
-                    label->duration = static_cast<float>(labelObject->getProperty("duration"));
-                }
-            }
-
-            if (labelObject->hasProperty("description"))
-            {
-                // Make sure description was provided as a string
-                if (labelObject->getProperty("description").isString())
-                {
-                    label->description = labelObject->getProperty("description").toString();
-                }
-            }
-
-            if (labelObject->hasProperty("color"))
-            {
-                // Make sure color was provided as an int
-                if ((labelObject->getProperty("color").isInt64()
-                     || labelObject->getProperty("color").isInt()))
-                {
-                    int color_val = static_cast<int>(labelObject->getProperty("color"));
-
-                    if (color_val != 0)
-                    {
-                        label->color = color_val;
-                    }
-                }
-            }
-
-            if (labelObject->hasProperty("link"))
-            {
-                // Make sure link was provided as a string
-                if (labelObject->getProperty("link").isString())
-                {
-                    label->link = labelObject->getProperty("link").toString();
-                }
-            }
+            DBG_AND_LOG("GradioClient::extractLabels: Extracted label of type \""
+                        << labelType << "\" with time \"" << String(label->t) << "\" and label \""
+                        << label->label << "\"."
+                        << (labelType == "SpectrogramLabel"
+                                ? " WARNING: HARP does not yet support spectrogram visualization."
+                                : ""));
 
             labels.push_back(std::move(label));
         }

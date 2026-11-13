@@ -196,6 +196,34 @@ inline OpResult getRequiredArrayProperty(DynamicObject::Ptr& parentDict,
     return OpResult::ok();
 }
 
+// The number under a key of a dictionary, or nothing if the key holds anything else
+inline std::optional<float> getOptionalNumberProperty(const DynamicObject& dict,
+                                                      const Identifier& key)
+{
+    const var& value = dict.getProperty(key);
+
+    if (value.isInt() || value.isInt64() || value.isDouble())
+    {
+        return static_cast<float>(static_cast<double>(value));
+    }
+
+    return {};
+}
+
+// The string under a key of a dictionary, or nothing if the key holds anything else
+inline std::optional<String> getOptionalStringProperty(const DynamicObject& dict,
+                                                       const Identifier& key)
+{
+    const var& value = dict.getProperty(key);
+
+    if (value.isString())
+    {
+        return value.toString();
+    }
+
+    return {};
+}
+
 /*
    Keeps track of the network streams that are currently in flight for a single
    model, so that they can be aborted locally.
