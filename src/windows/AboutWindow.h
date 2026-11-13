@@ -38,8 +38,6 @@ public:
         addAndMakeVisible(linksHeader);
 
         addLink(websiteLink, "Visit the HARP website", "https://harp.tools/");
-        addLink(
-            modelGlossaryLink, "Browse the model glossary", "https://harp.tools/usage/models.html");
         addLink(reportIssueLink, "Report an issue", "https://github.com/TEAMuP-dev/HARP/issues");
 
         addAndMakeVisible(acknowledgementsHeader);
@@ -94,7 +92,6 @@ public:
 
         addRow(linksHeader, ModelStyle::sectionHeaderHeight, sectionGap);
         addRow(websiteLink, rowHeight);
-        addRow(modelGlossaryLink, rowHeight);
         addRow(reportIssueLink, rowHeight);
 
         addRow(acknowledgementsHeader, ModelStyle::sectionHeaderHeight, sectionGap);
@@ -119,7 +116,7 @@ private:
     }
 
     static constexpr int windowWidth = 400;
-    static constexpr int windowHeight = 360;
+    static constexpr int windowHeight = 338;
     // Space around the contents, as around a model tab
     static constexpr int pagePadding = 14;
     static constexpr float rowHeight = 22;
@@ -131,7 +128,6 @@ private:
 
     ModelStyle::SectionHeader linksHeader { "Links" };
     HyperlinkButton websiteLink;
-    HyperlinkButton modelGlossaryLink;
     HyperlinkButton reportIssueLink;
 
     ModelStyle::SectionHeader acknowledgementsHeader { "Acknowledgements" };
