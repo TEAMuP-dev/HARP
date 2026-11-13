@@ -21,6 +21,7 @@
 
 #include "utils/Enums.h"
 #include "utils/Interface.h"
+#include "utils/Logging.h"
 #include "utils/ModelCatalog.h"
 #include "utils/Providers.h"
 #include "utils/Settings.h"
@@ -269,6 +270,9 @@ public:
                 entry != nullptr ? entry->name : modelPath.fromLastOccurrenceOf("/", false, false);
         }
 
+        DBG_AND_LOG("ModelTabContainer::openModelTab: Opening tab \"" << tabName << "\" for path \""
+                                                                      << modelPath << "\".");
+
         auto* tab = new ModelTab();
 
         // Forwarded rather than copied, so a callback set after this tab opened
@@ -308,6 +312,10 @@ public:
 
         if (index < 0)
             return;
+
+        DBG_AND_LOG("ModelTabContainer::closeTab: Closing tab \""
+                    << getTabNames()[index] << "\""
+                    << (tabToClose->hasPendingRequests() ? ", which aborts its requests." : "."));
 
         const auto currentIndex = getCurrentTabIndex();
         const auto targetIndex = currentIndex == index
@@ -505,6 +513,17 @@ private:
         {
             closeTab(tab);
             return;
+        }
+
+        /* A tab opened by a path alone is named after it until the model has loaded, which is
+           when its card says what it is called */
+        if (tab->isModelLoaded())
+        {
+            const int index = findTabIndex(tab);
+            const String modelName = String(tab->getModel()->getMetadata().name).trim();
+
+            if (index >= 0 && modelName.isNotEmpty() && getTabNames()[index] != modelName)
+                setTabName(index, modelName);
         }
 
         // What the tab has to show changed, and so how far its page has to scroll
