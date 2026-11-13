@@ -184,6 +184,9 @@ element along with it.
 
 ### Windows & Popups
 - Popups are transient and contextual (errors, selections, etc.).
+- A popup that asks for something is a `PopupPanel` (`gui/PopupPanel.h`), which is shown inside
+  the window rather than as a window of its own (see
+  [Dialog Windows on Linux](#dialog-windows-on-linux)).
 - Windows are persistent, user-managed, and represent full workflows or views.
 - Be consistent about ownership and lifetime: who creates, shows, and destroys.
 - Launch behavior (modal vs non-modal) should be predictable across the app.
@@ -230,6 +233,15 @@ No HARP code depends on that mapping any more, and new code should avoid it:
 
 Prefer one of those two approaches over reading the index passed to an
 `AlertWindow::showAsync` callback.
+
+### Dialog Windows on Linux
+
+A `DialogWindow` that sizes itself to its content can open as an empty sliver in the corner of the
+screen under X11. Just after such a window is shown it is resized to nothing, its content follows,
+and from then on the empty content dictates the size of the window. The popup for a custom path
+did this about every second or third time it was opened as a dialog window under Openbox, with
+JUCE 8.0.12, 8.0.17, and 9.0.5 alike. A `PopupPanel` is a child of the main window and involves no
+window manager, so prefer it for anything short-lived.
 
 ### Window State on Linux
 

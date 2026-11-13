@@ -81,6 +81,9 @@ public:
 
         host.getModelTabs().addChangeListener(this);
 
+        // Steps aside for a popup, which opens where this window floats, until it is dismissed
+        overlay.onPopupShowingChanged = [this](bool isShowing) { setVisible(! isShowing); };
+
         rebuildSteps();
         updateStep();
     }
