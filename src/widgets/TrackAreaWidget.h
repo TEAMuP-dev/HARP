@@ -333,7 +333,7 @@ public:
     {
         for (auto& m : mediaDisplays)
         {
-            m->setChooseFileButtonEnabled(enabled);
+            m->setFileLoadingEnabled(enabled);
         }
     }
 

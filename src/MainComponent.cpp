@@ -39,7 +39,7 @@ MainComponent::MainComponent()
     mediaClipboardWidget.onPreviewPaneVisibilityChanged = [this]
     {
         Settings::setValue(
-            "view.showPreviewPane", mediaClipboardWidget.isPreviewPaneVisible() ? "1" : "0", true);
+            "view.showPreviewPane", mediaClipboardWidget.isPreviewPaneVisible(), true);
         commandManager.commandStatusChanged();
     };
 
@@ -210,6 +210,10 @@ void MainComponent::updateWindowConstraints()
  */
 void MainComponent::importNewFile(File mediaFile, bool fromDAW)
 {
+    DBG_AND_LOG("MainComponent::importNewFile: Importing \""
+                << mediaFile.getFullPathName() << "\""
+                << (fromDAW ? ", which stays linked to the DAW that opened it." : "."));
+
     mediaClipboardWidget.addTrackFromFilePath(URL(mediaFile), fromDAW);
 
     if (! showMediaClipboard)
@@ -222,7 +226,8 @@ void MainComponent::openSettingsWindow(std::optional<Provider> focusProvider)
 {
     DialogWindow::LaunchOptions options;
     options.dialogTitle = "Settings";
-    options.dialogBackgroundColour = Colours::darkgrey;
+    options.dialogBackgroundColour =
+        getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground);
     // The settings dialog is a free-standing desktop window that can outlive this
     // component, so guard the callback with a SafePointer
     Component::SafePointer<MainComponent> safeThis(this);
@@ -291,67 +296,22 @@ void MainComponent::saveClipboardLayout()
 {
     Settings::setValue("view.mediaClipboardWidth", clipboardWidth);
     Settings::setValue("view.previewPaneHeight", mediaClipboardWidget.getPreviewPaneHeight());
-    Settings::setValue("view.previewPaneMinimized",
-                       mediaClipboardWidget.isPreviewPaneMinimized() ? "1" : "0",
-                       true);
+    Settings::setValue(
+        "view.previewPaneMinimized", mediaClipboardWidget.isPreviewPaneMinimized(), true);
 }
 
 void MainComponent::viewStatusAreaCallback()
 {
-    // Toggle status Area visibility state
+    // Toggle status area visibility state
     showStatusArea = ! showStatusArea;
 
-    // Find top-level window for resizing
-    if (auto* window = findParentComponentOfClass<DocumentWindow>())
-    {
-        // Determine which display contains HARP
-        auto* currentDisplay =
-            Desktop::getInstance().getDisplays().getDisplayForRect(window->getScreenBounds());
-
-        // Get current bounds of top-level window
-        Rectangle<int> windowBounds = window->getBounds();
-
-        // Default display height to height of current window
-        int currentDisplayHeight = windowBounds.getHeight();
-
-        if (currentDisplay != nullptr)
-        {
-            if (window->isFullScreen())
-            {
-                currentDisplayHeight = currentDisplay->totalArea.getHeight();
-            }
-            else
-            {
-                currentDisplayHeight = currentDisplay->userArea.getHeight();
-            }
-        }
-
-        if (showStatusArea)
-        {
-            // Scale bounds to extend window by height of status area
-            windowBounds.setHeight(
-                jmin(currentDisplayHeight, windowBounds.getHeight() + statusAreaHeight));
-        }
-        else
-        {
-            if (! window->isFullScreen())
-            {
-                // Scale bounds to reduce window to main height
-                windowBounds.setHeight(windowBounds.getHeight() - statusAreaHeight);
-            }
-        }
-
-        // Set extended or reduced bounds
-        window->setBounds(windowBounds);
-    }
+    resizeWindowForPanel(0, showStatusArea ? statusAreaHeight : -statusAreaHeight);
 
     // Add view preference to persistent settings
-    Settings::setValue("view.showStatusArea", showStatusArea ? "1" : "0", true);
+    Settings::setValue("view.showStatusArea", showStatusArea, true);
 
     // Send status message to add check to file menu
     commandManager.commandStatusChanged();
-
-    updateWindowConstraints();
 }
 
 void MainComponent::viewPreviewPaneCallback()
@@ -372,57 +332,59 @@ void MainComponent::viewMediaClipboardCallback()
         mediaClipboardWidget.stopPlayback();
     }
 
-    // Find top-level window for resizing
-    if (auto* window = findParentComponentOfClass<DocumentWindow>())
-    {
-        // Determine which display contains HARP
-        auto* currentDisplay =
-            Desktop::getInstance().getDisplays().getDisplayForRect(window->getScreenBounds());
-
-        // Get current bounds of top-level window
-        Rectangle<int> windowBounds = window->getBounds();
-
-        // Default display width to width of current window
-        int currentDisplayWidth = windowBounds.getWidth();
-
-        if (currentDisplay != nullptr)
-        {
-            if (window->isFullScreen())
-            {
-                currentDisplayWidth = currentDisplay->totalArea.getWidth();
-            }
-            else
-            {
-                currentDisplayWidth = currentDisplay->userArea.getWidth();
-            }
-        }
-
-        if (showMediaClipboard)
-        {
-            // Opened at the width it was last given
-            windowBounds.setWidth(
-                jmin(currentDisplayWidth, windowBounds.getWidth() + clipboardWidth));
-        }
-        else
-        {
-            if (! window->isFullScreen())
-            {
-                windowBounds.setWidth(
-                    jmax(minimumWindowWidth, windowBounds.getWidth() - getVisibleClipboardWidth()));
-            }
-        }
-
-        // Set extended or reduced bounds
-        window->setBounds(windowBounds);
-    }
+    // Opened at the width it was last given, and closed by the width at which it is showing
+    resizeWindowForPanel(showMediaClipboard ? clipboardWidth : -getVisibleClipboardWidth(), 0);
 
     // Add view preference to persistent settings
-    Settings::setValue("view.showMediaClipboard", showMediaClipboard ? "1" : "0", true);
+    Settings::setValue("view.showMediaClipboard", showMediaClipboard, true);
 
     // Send status message to add check to file menu
     commandManager.commandStatusChanged();
+}
 
-    updateWindowConstraints();
+void MainComponent::resizeWindowForPanel(int deltaWidth, int deltaHeight)
+{
+    auto* window = findParentComponentOfClass<DocumentWindow>();
+
+    const bool isShrinking = deltaWidth < 0 || deltaHeight < 0;
+
+    /* The smallest size the window may take depends on which panels are showing, and a platform
+       can hold every resize to it, this one included, as Windows does. A panel being hidden
+       therefore lowers the limit before the window shrinks, and one being shown raises it only
+       after the window has grown. In the other order the window keeps its size when a panel is
+       hidden at the limit, and then grows by another panel each time it is shown again. */
+    if (isShrinking)
+    {
+        updateWindowConstraints();
+    }
+
+    // A window that fills the display keeps doing so, and lays the panel out within it
+    if (window != nullptr && ! window->isFullScreen())
+    {
+        Rectangle<int> windowBounds = window->getBounds();
+
+        // Determine which display contains HARP, beyond which the window does not grow
+        auto* currentDisplay =
+            Desktop::getInstance().getDisplays().getDisplayForRect(window->getScreenBounds());
+
+        const Rectangle<int> displayArea =
+            currentDisplay != nullptr ? currentDisplay->userArea : windowBounds;
+
+        windowBounds.setWidth(jmin(jmax(displayArea.getWidth(), windowBounds.getWidth()),
+                                   windowBounds.getWidth() + deltaWidth));
+        windowBounds.setHeight(jmin(jmax(displayArea.getHeight(), windowBounds.getHeight()),
+                                    windowBounds.getHeight() + deltaHeight));
+
+        window->setBoundsConstrained(windowBounds);
+    }
+
+    if (! isShrinking)
+    {
+        updateWindowConstraints();
+    }
+
+    // A window that kept its size, as one filling the display does, still has the panel to lay out
+    resized();
 }
 
 /* --Help-- */
@@ -433,7 +395,8 @@ void MainComponent::openAboutWindow()
 
     DialogWindow::LaunchOptions options;
     options.dialogTitle = "About " + String(APP_NAME);
-    options.dialogBackgroundColour = Colours::grey;
+    options.dialogBackgroundColour =
+        getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground);
     options.content.setOwned(aboutComponent.release());
 
     options.useNativeTitleBar = true;

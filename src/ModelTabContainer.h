@@ -16,11 +16,13 @@
 #include "clients/Client.h"
 
 #include "gui/RoundIconButton.h"
+#include "gui/TabBarLookAndFeel.h"
 
 #include "media/MediaDisplayComponent.h"
 
 #include "utils/Enums.h"
 #include "utils/Interface.h"
+#include "utils/Logging.h"
 #include "utils/ModelCatalog.h"
 #include "utils/Providers.h"
 #include "utils/Settings.h"
@@ -29,88 +31,17 @@
 
 using namespace juce;
 
-class ModelTabsLookAndFeel : public LookAndFeel_V4
+class ModelTabsLookAndFeel : public TabBarLookAndFeel
 {
 public:
-    void drawTabbedButtonBarBackground(TabbedButtonBar& bar, Graphics& g) override
-    {
-        g.fillAll(tabBarColour);
-        g.setColour(separatorColour);
-        g.fillRect(0, bar.getHeight() - 1, bar.getWidth(), 1);
-    }
-
-    void drawTabAreaBehindFrontButton(TabbedButtonBar&, Graphics& g, int w, int h) override
-    {
-        g.setColour(separatorColour);
-        g.fillRect(0, h - 1, w, 1);
-    }
-
-    void drawTabButton(TabBarButton& button,
-                       Graphics& g,
-                       bool isMouseOver,
-                       bool isMouseDown) override
-    {
-        const auto isActive = button.isFrontTab();
-        auto area = button.getActiveArea();
-
-        const auto fill =
-            isActive ? activeTabColour
-                     : inactiveTabColour.brighter(isMouseOver || isMouseDown ? 0.08f : 0.0f);
-
-        g.setColour(fill);
-        g.fillRect(area);
-
-        if (button.getIndex() > 0)
-        {
-            g.setColour(separatorColour);
-            g.fillRect(area.getX(), area.getY() + 2, 1, area.getHeight() - 4);
-        }
-
-        auto textArea = button.getTextArea().reduced(tabTextInset, 0);
-
-        g.setColour(isActive ? activeTextColour : inactiveTextColour);
-
-        g.drawText(button.getButtonText(), textArea, Justification::centred, true);
-    }
-
     int getTabButtonBestWidth(TabBarButton& button, int /*tabDepth*/) override
     {
         // The Home tab is always first
-        return button.getIndex() == 0 ? homeTabWidth : fixedTabWidth;
-    }
-
-    /* The default gives a tab's close button the full height of the tab, which stretches it,
-       so it is kept square, centred, and clear of the tab's edge instead */
-    Rectangle<int> getTabButtonExtraComponentBounds(const TabBarButton& button,
-                                                    Rectangle<int>& textArea,
-                                                    Component& extraComponent) override
-    {
-        textArea.removeFromRight(extraComponentMargin);
-
-        const int side = extraComponent.getWidth();
-
-        return LookAndFeel_V4::getTabButtonExtraComponentBounds(button, textArea, extraComponent)
-            .withSizeKeepingCentre(side, side);
-    }
-
-    void drawTabButtonText(TabBarButton&,
-                           Graphics&,
-                           bool /*isMouseOver*/,
-                           bool /*isMouseDown*/) override
-    {
+        return button.getIndex() == 0 ? homeTabWidth : tabWidth;
     }
 
 private:
-    const Colour tabBarColour { Colour(0xff1f1f1f) };
-    const Colour inactiveTabColour { Colour(0xff242424) };
-    const Colour activeTabColour { Colour(0xff343434) };
-    const Colour separatorColour { Colour(0xff4a4a4a) };
-    const Colour activeTextColour { Colours::white };
-    const Colour inactiveTextColour { Colour(0xffaeb0b4) };
-    static constexpr int fixedTabWidth = 140;
     static constexpr int homeTabWidth = 64;
-    static constexpr int tabTextInset = 10;
-    static constexpr int extraComponentMargin = 6;
 };
 
 /**
@@ -269,6 +200,9 @@ public:
                 entry != nullptr ? entry->name : modelPath.fromLastOccurrenceOf("/", false, false);
         }
 
+        DBG_AND_LOG("ModelTabContainer::openModelTab: Opening tab \"" << tabName << "\" for path \""
+                                                                      << modelPath << "\".");
+
         auto* tab = new ModelTab();
 
         // Forwarded rather than copied, so a callback set after this tab opened
@@ -308,6 +242,10 @@ public:
 
         if (index < 0)
             return;
+
+        DBG_AND_LOG("ModelTabContainer::closeTab: Closing tab \""
+                    << getTabNames()[index] << "\""
+                    << (tabToClose->hasPendingRequests() ? ", which aborts its requests." : "."));
 
         const auto currentIndex = getCurrentTabIndex();
         const auto targetIndex = currentIndex == index
@@ -505,6 +443,17 @@ private:
         {
             closeTab(tab);
             return;
+        }
+
+        /* A tab opened by a path alone is named after it until the model has loaded, which is
+           when its card says what it is called */
+        if (tab->isModelLoaded())
+        {
+            const int index = findTabIndex(tab);
+            const String modelName = String(tab->getModel()->getMetadata().name).trim();
+
+            if (index >= 0 && modelName.isNotEmpty() && getTabNames()[index] != modelName)
+                setTabName(index, modelName);
         }
 
         // What the tab has to show changed, and so how far its page has to scroll

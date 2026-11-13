@@ -725,8 +725,10 @@ void MediaDisplayComponent::setTrackName(String name)
     trackNameLabel.setText(trackName, dontSendNotification);
 }
 
-void MediaDisplayComponent::setChooseFileButtonEnabled(bool enabled)
+void MediaDisplayComponent::setFileLoadingEnabled(bool enabled)
 {
+    fileLoadingEnabled = enabled;
+
     chooseFileButton.setMode(enabled ? chooseFileButtonActiveInfo.displayLabel
                                      : chooseFileButtonInactiveInfo.displayLabel);
 }
@@ -759,7 +761,8 @@ void MediaDisplayComponent::resetScrollBar()
 void MediaDisplayComponent::resetButtonState()
 {
     updatePlaybackButtons();
-    chooseFileButton.setMode(chooseFileButtonActiveInfo.displayLabel);
+    chooseFileButton.setMode(fileLoadingEnabled ? chooseFileButtonActiveInfo.displayLabel
+                                                : chooseFileButtonInactiveInfo.displayLabel);
     saveFileButton.setMode(saveFileButtonInactiveInfo.displayLabel);
     copyFileButton.setMode(copyFileButtonInactiveInfo.displayLabel);
 }
@@ -866,6 +869,9 @@ void MediaDisplayComponent::filesDropped(const StringArray& files, int /*x*/, in
     }
     else
     {
+        DBG_AND_LOG("MediaDisplayComponent::filesDropped: Loading "
+                    << mediaFile.getFullPathName() << " into track \"" << getTrackName() << "\".");
+
         initializeDisplay(URL(mediaFile));
     }
 }

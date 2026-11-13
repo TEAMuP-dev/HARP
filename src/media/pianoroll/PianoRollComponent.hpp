@@ -7,6 +7,8 @@
  * https://github.com/Sjhunt93/Piano-Roll-Editor
  */
 
+#pragma once
+
 #include "KeyboardComponent.hpp"
 #include "NoteGridComponent.hpp"
 
@@ -91,8 +93,9 @@ private:
 
     Range<double> visibleMediaRange;
 
-    int minKeysVisible = 5;
-    int maxKeysVisible = 16;
+    // The fewest and the most keys the roll shows at once, at full zoom and at none
+    static constexpr int minKeysVisible = 5;
+    static constexpr int maxKeysVisible = 16;
     Range<double> visibleKeyRange;
     Range<double> fullKeyRange = { 0.0, 128.0 };
 

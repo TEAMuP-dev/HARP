@@ -177,12 +177,16 @@ element along with it.
 - `jassertfalse` is acceptable for truly unreachable states (logic errors, violated invariants).
 
 ### Logging & Debugging
-- Use the `DBG_AND_LOG` macro to log to console and file simultaneously.
+- Use the `DBG_AND_LOG` macro to log to console and file simultaneously. The logger adds the time
+  to each message, and everything goes to the one `main.log`.
 - Log at system boundaries: network calls, job lifecycle changes, model execution, and cancellation.
 - Prefer structured log messages and include any contextual information (_e.g._ `"ModelTab::cancelCallback: Canceling process \"" + String(currentProcessID) + "\"."`).
 
 ### Windows & Popups
 - Popups are transient and contextual (errors, selections, etc.).
+- A popup that asks for something is a `PopupPanel` (`gui/PopupPanel.h`), which is shown inside
+  the window rather than as a window of its own (see
+  [Dialog Windows on Linux](#dialog-windows-on-linux)).
 - Windows are persistent, user-managed, and represent full workflows or views.
 - Be consistent about ownership and lifetime: who creates, shows, and destroys.
 - Launch behavior (modal vs non-modal) should be predictable across the app.
@@ -206,6 +210,8 @@ element along with it.
 - Use submodules for external dependencies that work out-of-the-box.
 - Organize external code with clear boundaries (_i.e._ `external/`) and treat it as read-only.
 - Do not modify third-party code unless absolutely necessary. Wrap it instead.
+- Credit third-party code in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and in the `About
+  HARP` window as well if its license asks for attribution in the product.
 - Only include what is needed in build targets, and avoid leaking dependencies globally.
 
 ## Known JUCE Behaviors
@@ -229,3 +235,20 @@ No HARP code depends on that mapping any more, and new code should avoid it:
 
 Prefer one of those two approaches over reading the index passed to an
 `AlertWindow::showAsync` callback.
+
+### Dialog Windows on Linux
+
+A `DialogWindow` that sizes itself to its content can open as an empty sliver in the corner of the
+screen under X11. Just after such a window is shown it is resized to nothing, its content follows,
+and from then on the empty content dictates the size of the window. The popup for a custom path
+did this about every second or third time it was opened as a dialog window under Openbox, with
+JUCE 8.0.12, 8.0.17, and 9.0.5 alike. A `PopupPanel` is a child of the main window and involves no
+window manager, so prefer it for anything short-lived.
+
+### Window State on Linux
+
+`ResizableWindow::getWindowStateAsString` records the frame the window manager adds, which
+`restoreWindowStateFromString` needs to put a window back where it was. Saving and restoring the
+bounds alone moves the window down by the height of its title bar on every launch. With JUCE 8.0.12
+the state restores exactly. With JUCE 8.0.17 and 9.0.5 the restored window was smaller by the size
+of the frame on each launch under Openbox, so check this when updating JUCE.

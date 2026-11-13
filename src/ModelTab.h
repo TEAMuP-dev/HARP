@@ -63,6 +63,8 @@ public:
 
         const String pathToLoad = canonicalizeModelPath(modelPath);
 
+        requestedPath = pathToLoad;
+
         DBG_AND_LOG("ModelTab::loadModel: Attempting to load path \"" << pathToLoad << "\".");
 
         SafePointer<ModelTab> safeThis(this);
@@ -315,6 +317,10 @@ private:
         else if (std::get_if<JsonError>(&error) || std::get_if<ControlError>(&error))
             isReportableError = true;
 
+        /* A model HARP lists is HARP's to keep working. One the user added by its path
+           belongs to whoever deployed it, whom a report to HARP would not reach. */
+        isReportableError = isReportableError && isFeaturedModel();
+
         // If a popup is being replaced, its pending cleanup must still run so the
         // widgets it was responsible for re-enabling do not stay disabled
         dismissErrorPopup();
@@ -492,7 +498,15 @@ private:
         URL(issueBaseUrl + query).launchInDefaultBrowser();
     }
 
-    void finishLoading(const OpResult& result, const String& requestedPath)
+    // Whether HARP lists the model itself, as opposed to the user having added it by its path
+    bool isFeaturedModel() const
+    {
+        const auto* entry = catalog->findEntry(requestedPath);
+
+        return entry != nullptr && ! entry->isCustom;
+    }
+
+    void finishLoading(const OpResult& result, const String& pathToLoad)
     {
         if (abandoned)
         {
@@ -503,6 +517,13 @@ private:
         if (result.wasOk())
         {
             loading = false;
+
+            // The provider may spell the path differently from how it was entered
+            requestedPath = model->getLoadedPath();
+
+            DBG_AND_LOG("ModelTab::finishLoading: Loaded \"" << String(model->getMetadata().name)
+                                                             << "\" from path \"" << requestedPath
+                                                             << "\".");
 
             catalog->recordLoadSuccess(model->getLoadedPath(), model->getMetadata());
 
@@ -533,7 +554,7 @@ private:
         {
             const Error error = result.getError();
 
-            catalog->recordLoadFailure(requestedPath, error);
+            catalog->recordLoadFailure(pathToLoad, error);
 
             // The outcome is reported once the error has been seen
             openErrorPopup(error,
@@ -589,7 +610,7 @@ private:
 
         processCancelButton.setMode(cancelButtonInfo.displayLabel);
 
-        // Switch choose-file button to inactive mode on all tracks during processing
+        // Input tracks take no other file, by button or by drop, while theirs is processed
         inputTrackAreaWidget.setLoadTrackEnabled(false);
 
         uint64_t processID = currentProcessID;
@@ -649,6 +670,10 @@ private:
 
         if (result.wasOk())
         {
+            DBG_AND_LOG("ModelTab::finishProcessing: Received "
+                        << (int) outputFiles.size() << " output file(s) and " << (int) labels.size()
+                        << " label(s).");
+
             auto& outputMediaDisplays = outputTrackAreaWidget.getMediaDisplays();
 
             for (size_t i = 0; i < outputMediaDisplays.size() && i < outputFiles.size(); ++i)
@@ -888,6 +913,9 @@ private:
     std::atomic<uint64_t> currentProcessID { 0 };
     std::atomic<bool> abandoned { false };
     bool loading = false;
+
+    // The path by which the model was requested, and once it has loaded, its path as loaded
+    String requestedPath;
 
     SharedResourcePointer<ModelCatalog> catalog;
 

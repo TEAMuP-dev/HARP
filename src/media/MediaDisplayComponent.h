@@ -122,7 +122,10 @@ public:
 
     void setMediaInstructions(String instructions) { mediaInstructions = instructions; }
 
-    void setChooseFileButtonEnabled(bool enabled);
+    /* Whether a file can be loaded into this track, by its folder button or by a drop. A
+       track is closed to both while its model is processing, so that it keeps showing what
+       was sent. */
+    void setFileLoadingEnabled(bool enabled);
 
     void resetDisplay(); // Reset all state and media
     void initializeDisplay(const URL& filePath); // Initialize new display
@@ -137,11 +140,11 @@ public:
     /** Whether a wheel event over this track is used to zoom or scrub its media. */
     virtual bool usesMouseWheel() const { return isFileLoaded() && ! isThumbnailTrack(); }
 
-    bool isInterestedInFileDrag(const StringArray& /*files*/) override { return isInputTrack(); }
+    bool isInterestedInFileDrag(const StringArray& /*files*/) override { return acceptsFiles(); }
 
     bool isInterestedInDragSource(const DragAndDropTarget::SourceDetails& details) override
     {
-        return isInputTrack() && details.description.isString();
+        return acceptsFiles() && details.description.isString();
     }
 
     void itemDropped(const DragAndDropTarget::SourceDetails& details) override
@@ -255,6 +258,8 @@ private:
 
     // Only a header beside the media, as on input and output tracks, has buttons
     bool hasHeaderButtons() const { return ! isThumbnailTrack() && ! isPreviewTrack(); }
+
+    bool acceptsFiles() const { return isInputTrack() && fileLoadingEnabled; }
     int getNumHeaderButtons() const;
 
     // Header buttons are stacked in a column, each with a margin above and below
@@ -373,6 +378,7 @@ private:
 
     bool isSelected = false;
     bool paused = false;
+    bool fileLoadingEnabled = true;
 
     URL originalFilePath;
 

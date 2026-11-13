@@ -14,6 +14,9 @@
 
 #include "../../ModelTabContainer.h"
 
+#include "../../gui/Palette.h"
+
+#include "../../utils/Interface.h"
 #include "../../utils/Settings.h"
 
 #include "TutorialOverlay.h"
@@ -45,6 +48,9 @@ struct TutorialHost
 
 struct TutorialStep
 {
+    // Begins a line of the description that is shown as a heading, without the mark
+    static constexpr const char* headingMark = "# ";
+
     String title;
     String description;
     std::vector<TutorialTargets::Target> highlights = {};
@@ -58,10 +64,10 @@ public:
     static constexpr const char* fallbackModelPath = "teamup-tech/Demucs";
 
     explicit TutorialWindow(TutorialHost& tutorialHost)
-        : DocumentWindow("Welcome to HARP",
-                         Desktop::getInstance().getDefaultLookAndFeel().findColour(
-                             ResizableWindow::backgroundColourId),
-                         DocumentWindow::closeButton),
+        : DocumentWindow(
+              "Welcome to HARP",
+              getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground),
+              DocumentWindow::closeButton),
           host(tutorialHost),
           overlay(host.getTutorialArea())
     {
@@ -81,6 +87,9 @@ public:
 
         host.getModelTabs().addChangeListener(this);
 
+        // Steps aside for a popup, which opens where this window floats, until it is dismissed
+        overlay.onPopupShowingChanged = [this](bool isShowing) { setVisible(! isShowing); };
+
         rebuildSteps();
         updateStep();
     }
@@ -97,7 +106,7 @@ public:
 
     void paint(Graphics& g) override
     {
-        g.fillAll(getLookAndFeel().findColour(ResizableWindow::backgroundColourId));
+        g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
     }
 
     void positionOnHostDisplay()
@@ -205,11 +214,11 @@ private:
             { "Quick Start",
               (isLoaded ? "This is " + modelName + ". Its details are at the top of its tab.\n\n"
                         : String())
-                  + "1. Add input\n"
+                  + "# 1. Add input\n"
                     "Drag an audio or MIDI file onto an input track, or click its folder icon to choose one. Its play icon previews it.\n\n"
-                    "2. Process\n"
+                    "# 2. Process\n"
                     "Click Process to run the model on your input. While it runs, the same button cancels it.\n\n"
-                    "3. Get the output\n"
+                    "# 3. Get the output\n"
                     "The results appear in the output tracks, ready to play or save.",
               { { modelTabs },
                 { trackFolderButton, inputTracks },
@@ -341,9 +350,8 @@ private:
 
     void finish()
     {
-        Settings::setValue("view.showWelcomePopup",
-                           content->dontShowAgainToggle.getToggleState() ? "0" : "1",
-                           true);
+        Settings::setValue(
+            "view.showWelcomePopup", ! content->dontShowAgainToggle.getToggleState(), true);
 
         // Close the tab the tutorial opened on the user's behalf. Resetting it in place would
         // leave a blank tab behind, since models are chosen on the Home tab.
@@ -360,28 +368,44 @@ private:
     public:
         explicit TutorialContent(TutorialWindow& ownerWindow) : owner(ownerWindow)
         {
-            titleLabel.setFont(Font(FontOptions(24.0f, Font::bold)));
-            titleLabel.setJustificationType(Justification::centred);
+            // Headed as the About window is, with the step in place of the version
+            titleLabel.setFont(ModelStyle::font(24.0f, true));
             addAndMakeVisible(titleLabel);
+
+            pageIndicator.setFont(ModelStyle::font(textHeight));
+            pageIndicator.setColour(Label::textColourId, ModelStyle::secondaryText);
+            addAndMakeVisible(pageIndicator);
 
             descriptionEditor.setMultiLine(true);
             descriptionEditor.setReadOnly(true);
             descriptionEditor.setScrollbarsShown(true);
             descriptionEditor.setCaretVisible(false);
-            // Look like a label
-            descriptionEditor.setColour(TextEditor::backgroundColourId, Colours::transparentBlack);
-            descriptionEditor.setColour(TextEditor::outlineColourId, Colours::transparentBlack);
-            descriptionEditor.setFont(Font(FontOptions(16.0f)));
+            // Looks like a label, and starts at the same edge as the labels around it
+            for (const auto colourID : { TextEditor::backgroundColourId,
+                                         TextEditor::outlineColourId,
+                                         TextEditor::focusedOutlineColourId })
+            {
+                descriptionEditor.setColour(colourID, Colours::transparentBlack);
+            }
+            descriptionEditor.setBorder({});
+            descriptionEditor.setIndents(0, 0);
+            descriptionEditor.setLineSpacing(lineSpacing);
             addAndMakeVisible(descriptionEditor);
 
+            learnMoreLink.setFont(ModelStyle::font(textHeight), false, Justification::centredLeft);
+            learnMoreLink.setColour(HyperlinkButton::textColourId, ModelStyle::accent);
             addAndMakeVisible(learnMoreLink);
 
-            copyrightLabel.setText("Copyright 2026 TEAMuP. All rights reserved.",
-                                   dontSendNotification);
-            copyrightLabel.setJustificationType(Justification::centred);
-            copyrightLabel.setFont(Font(FontOptions(12.0f)));
-            copyrightLabel.setColour(Label::textColourId, Colours::grey);
+            copyrightLabel.setText(APP_COPYRIGHT, dontSendNotification);
+            copyrightLabel.setFont(ModelStyle::font(12.0f));
+            copyrightLabel.setColour(Label::textColourId, ModelStyle::secondaryText);
             addAndMakeVisible(copyrightLabel);
+
+            for (auto* label : { &titleLabel, &pageIndicator, &copyrightLabel })
+            {
+                label->setJustificationType(Justification::centredLeft);
+                label->setBorderSize({ 0, 0, 0, 0 });
+            }
 
             nextButton.onClick = [this] { owner.nextStep(); };
             addAndMakeVisible(nextButton);
@@ -396,22 +420,40 @@ private:
                 ! Settings::getBoolValue("view.showWelcomePopup", true), dontSendNotification);
             addAndMakeVisible(dontShowAgainToggle);
 
-            pageIndicator.setJustificationType(Justification::centredLeft);
-            pageIndicator.setFont(Font(FontOptions(12.0f)));
-            pageIndicator.setInterceptsMouseClicks(false, false);
-            addAndMakeVisible(pageIndicator);
-
             showDetailsButton.onClick = [this] { owner.toggleControlDetails(); };
             addChildComponent(showDetailsButton);
 
-            setSize(500, 420);
+            /* The widths are measured once. The button that lists the controls is wide enough
+               for either of its two texts. */
+            skipButtonWidth = skipButton.getBestWidthForHeight(buttonHeight);
+
+            for (const auto* text : { hideDetailsText, showDetailsText })
+            {
+                showDetailsButton.setButtonText(text);
+                showDetailsButtonWidth = jmax(
+                    showDetailsButtonWidth, showDetailsButton.getBestWidthForHeight(buttonHeight));
+            }
+
+            dontShowAgainToggle.setSize(0, buttonHeight);
+            dontShowAgainToggle.changeWidthToFitText();
+            toggleWidth = dontShowAgainToggle.getWidth();
+
+            setSize(windowWidth, windowHeight);
+        }
+
+        void paint(Graphics& g) override
+        {
+            g.fillAll(
+                getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
         }
 
         void showStep(const TutorialStep& step, int index, int numSteps, bool offersDetails)
         {
             titleLabel.setText(step.title, dontSendNotification);
-            descriptionEditor.setText(step.description);
-            descriptionEditor.setCaretPosition(0);
+            pageIndicator.setText("Step " + String(index + 1) + " of " + String(numSteps),
+                                  dontSendNotification);
+
+            showDescription(step.description);
 
             const bool isLastStep = index == numSteps - 1;
 
@@ -422,74 +464,89 @@ private:
             learnMoreLink.setVisible(index == 0);
             copyrightLabel.setVisible(index == 0);
 
-            pageIndicator.setText("Step " + String(index + 1) + " of " + String(numSteps),
-                                  dontSendNotification);
-
             showDetailsButton.setVisible(offersDetails);
-            showDetailsButton.setButtonText(showingDetails ? "Hide control descriptions"
-                                                           : "List control descriptions");
+            showDetailsButton.setButtonText(showingDetails ? hideDetailsText : showDetailsText);
 
             resized();
         }
 
         void resized() override
         {
-            auto area = getLocalBounds().reduced(20);
+            FlexBox column;
+            column.flexDirection = FlexBox::Direction::column;
 
-            titleLabel.setBounds(area.removeFromTop(40));
-            area.removeFromTop(10);
+            auto addRow = [&column](Component& component, int height, int marginAbove = 0)
+            {
+                column.items.add(FlexItem(component)
+                                     .withHeight((float) height)
+                                     .withMargin({ (float) marginAbove, 0, 0, 0 }));
+            };
 
-            auto footerArea = area.removeFromBottom(72);
-            auto footer = footerArea.removeFromTop(30);
-            auto toggleRow = footerArea.removeFromBottom(30);
+            addRow(titleLabel, titleHeight);
+            addRow(pageIndicator, rowHeight);
 
-            const int buttonHeight = 30;
-            const int buttonPaddingX = 28;
-            const int buttonWidth =
-                jmax(skipButton.getBestWidthForHeight(buttonHeight) + buttonPaddingX,
-                     nextButton.getBestWidthForHeight(buttonHeight) + buttonPaddingX);
-            skipButton.setBounds(footer.removeFromLeft(buttonWidth));
-            nextButton.setBounds(footer.removeFromRight(buttonWidth));
-            footer.removeFromRight(10);
-            prevButton.setBounds(footer.removeFromRight(buttonWidth));
-
-            const int middleRightX =
-                prevButton.isVisible() ? (prevButton.getX() - 10) : nextButton.getX();
-            const int middleX = skipButton.getRight() + 12;
-            copyrightLabel.setBounds(
-                middleX, footer.getY(), jmax(0, middleRightX - middleX), footer.getHeight());
-
-            constexpr int toggleHeight = 26;
-            const int toggleTextWidth = GlyphArrangement::getStringWidthInt(
-                Font(FontOptions(16.0f)), dontShowAgainToggle.getButtonText());
-            const int toggleWidth = 24 + toggleTextWidth + 16;
-            const int toggleY = toggleRow.getY() + 12;
-            dontShowAgainToggle.setBounds(
-                toggleRow.getRight() - toggleWidth, toggleY, toggleWidth, toggleHeight);
-
-            const int stepWidth = jmax(skipButton.getWidth(),
-                                       GlyphArrangement::getStringWidthInt(pageIndicator.getFont(),
-                                                                           pageIndicator.getText())
-                                           + 16);
-            pageIndicator.setBounds(toggleRow.getX(), toggleY, stepWidth, toggleHeight);
-
-            area.removeFromBottom(8);
+            /* The text takes whatever height the rows around it leave, and scrolls where a step
+               needs more. What a step adds beneath it therefore keeps its place, as the button
+               that lists the controls has to while the list comes and goes. */
+            column.items.add(FlexItem(descriptionEditor)
+                                 .withFlex(1)
+                                 .withMargin({ (float) sectionGap, 0, 0, 0 }));
 
             if (learnMoreLink.isVisible())
             {
-                learnMoreLink.setBounds(area.removeFromBottom(36).withSizeKeepingCentre(180, 30));
-                area.removeFromBottom(4);
-            }
-            else if (showDetailsButton.isVisible())
-            {
-                showDetailsButton.setBounds(area.removeFromBottom(30).reduced(20, 0));
-                area.removeFromBottom(8);
+                addRow(learnMoreLink, rowHeight, rowGap);
             }
 
-            descriptionEditor.setBounds(area);
+            if (showDetailsButton.isVisible())
+            {
+                column.items.add(FlexItem(showDetailsButton)
+                                     .withWidth((float) showDetailsButtonWidth)
+                                     .withHeight((float) buttonHeight)
+                                     .withAlignSelf(FlexItem::AlignSelf::flexStart)
+                                     .withMargin({ (float) rowGap, 0, 0, 0 }));
+            }
+
+            if (copyrightLabel.isVisible())
+            {
+                addRow(copyrightLabel, rowHeight);
+            }
+
+            /* Leaving the tutorial is on the left and moving through it on the right, so that
+               the buttons used most keep their place from step to step */
+            FlexBox footer;
+
+            auto addToFooter = [&footer](Component& component, int width, int marginLeft = 0)
+            {
+                footer.items.add(FlexItem(component)
+                                     .withWidth((float) width)
+                                     .withMargin({ 0, 0, 0, (float) marginLeft }));
+            };
+
+            if (skipButton.isVisible())
+            {
+                addToFooter(skipButton, skipButtonWidth);
+            }
+
+            addToFooter(dontShowAgainToggle, toggleWidth, skipButton.isVisible() ? buttonGap : 0);
+
+            footer.items.add(FlexItem().withFlex(1));
+
+            if (prevButton.isVisible())
+            {
+                addToFooter(prevButton, stepButtonWidth);
+            }
+
+            addToFooter(nextButton, stepButtonWidth, buttonGap);
+
+            column.items.add(FlexItem(footer)
+                                 .withHeight((float) buttonHeight)
+                                 .withMargin({ (float) sectionGap, 0, 0, 0 }));
+
+            column.performLayout(getLocalBounds().reduced(pagePadding));
         }
 
         Label titleLabel;
+        Label pageIndicator;
         TextEditor descriptionEditor;
 
         TextButton nextButton { "Next" };
@@ -497,16 +554,64 @@ private:
         TextButton skipButton { "Skip Tutorial" };
         ToggleButton dontShowAgainToggle { "Don't show again" };
 
-        Label pageIndicator;
-        HyperlinkButton learnMoreLink { "Learn more", URL("https://harp.tools/intro.html") };
+        HyperlinkButton learnMoreLink { "Learn more on the HARP website",
+                                        URL("https://harp.tools/intro.html") };
         Label copyrightLabel;
 
-        TextButton showDetailsButton;
+        TextButton showDetailsButton { showDetailsText };
 
         int currentStep = 0;
         bool showingDetails = false;
 
     private:
+        // Shows the text of a step, with each line that begins with the heading mark in bold
+        void showDescription(const String& description)
+        {
+            descriptionEditor.clear();
+
+            StringArray lines;
+            lines.addLines(description);
+
+            for (int i = 0; i < lines.size(); ++i)
+            {
+                const bool isHeading = lines[i].startsWith(TutorialStep::headingMark);
+
+                // The font of the editor applies to whatever is added next
+                descriptionEditor.setFont(ModelStyle::font(textHeight, isHeading));
+                descriptionEditor.moveCaretToEnd();
+                descriptionEditor.insertTextAtCaret(
+                    (isHeading
+                         ? lines[i].fromFirstOccurrenceOf(TutorialStep::headingMark, false, false)
+                         : lines[i])
+                    + (i < lines.size() - 1 ? "\n" : ""));
+            }
+
+            descriptionEditor.setCaretPosition(0);
+        }
+
+        static constexpr const char* showDetailsText = "List control descriptions";
+        static constexpr const char* hideDetailsText = "Hide control descriptions";
+
+        static constexpr int windowWidth = 480;
+        static constexpr int windowHeight = 380;
+        // Space around the contents, and the sizes of the rows, as in the Settings and About windows
+        static constexpr int pagePadding = 14;
+        static constexpr int titleHeight = 30;
+        static constexpr int rowHeight = 22;
+        static constexpr int rowGap = 4;
+        static constexpr int sectionGap = 12;
+        static constexpr int buttonHeight = 28;
+        static constexpr int buttonGap = 8;
+        // Wide enough for "Back", "Next", and "Finish" alike
+        static constexpr int stepButtonWidth = 84;
+
+        static constexpr float textHeight = 14.0f;
+        static constexpr float lineSpacing = 1.15f;
+
+        int skipButtonWidth = 0;
+        int showDetailsButtonWidth = 0;
+        int toggleWidth = 0;
+
         TutorialWindow& owner;
     };
 
