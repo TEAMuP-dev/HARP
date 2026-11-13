@@ -33,14 +33,11 @@ public:
 
     static bool matchesPathSpec(String modelPath)
     {
-        modelPath = withoutTrailingSlashes(modelPath);
-
-        return isValidLocalPath(modelPath) || isValidGradioPath(modelPath)
-               || isValidHuggingFacePath(modelPath);
+        return classifyPath(withoutTrailingSlashes(modelPath)) != PathForm::Unknown;
     }
 
-    /* A pasted address often ends in a "/", which none of the forms below carries. The
-       validators compare against the end of the path, so it is dropped before anything
+    /* A pasted address often ends in a "/", which none of the forms below carries.
+       classifyPath compares against the end of the path, so it is dropped before anything
        looks at the path, and the canonical path never has one. */
     static String withoutTrailingSlashes(String modelPath)
     {
@@ -65,14 +62,9 @@ public:
            original spelling survives. Reducing it offline would only guess, which is
            what resolveCanonicalPath below asks the Hub to avoid. Local and Gradio
            addresses have no canonical form at all and are left alone. */
-        if (isValidLongHuggingFacePath(modelPath))
+        if (classifyPath(modelPath) == PathForm::HuggingFacePage)
         {
-            const String hostSlashModel = inferHostSlashModel(modelPath);
-
-            if (hostSlashModel.isNotEmpty())
-            {
-                return hostSlashModel;
-            }
+            return inferHostSlashModel(modelPath);
         }
 
         return modelPath;
@@ -90,8 +82,10 @@ public:
     {
         canonicalPath = canonicalizePath(modelPath);
 
+        const PathForm form = classifyPath(canonicalPath);
+
         // Only Hugging Face publishes a canonical spelling to resolve against
-        if (! isValidHuggingFacePath(canonicalPath))
+        if (! isHuggingFaceForm(form))
         {
             return OpResult::ok();
         }
@@ -100,7 +94,7 @@ public:
            queried for it without already knowing the answer. It advertises that
            identity in a "canonical" link header, which it sends whether it is awake
            or asleep, so no request to the app itself is needed. */
-        if (isValidShortHuggingFacePath(canonicalPath))
+        if (form == PathForm::HuggingFaceSubdomain)
         {
             const String advertisedPath = queryCanonicalSpace(inferEndpointPath(canonicalPath));
 
@@ -130,8 +124,8 @@ public:
 
         std::unique_ptr<InputStream> stream;
 
-        OpResult result = makeGETRequestStream(
-            URL("https://huggingface.co/api/spaces/" + canonicalPath), stream, modelPath, 10000);
+        OpResult result =
+            makeGETRequestStream(URL(spacesAPIURL + canonicalPath), stream, modelPath, 10000);
 
         if (result.failed())
         {
@@ -175,7 +169,7 @@ public:
 
         const String resolvedPath = responseDict->getProperty(identityKey).toString().trim();
 
-        if (resolvedPath.isNotEmpty() && isValidAbbrevHuggingFacePath(resolvedPath))
+        if (resolvedPath.isNotEmpty() && isSpaceId(resolvedPath))
         {
             if (resolvedPath != canonicalPath)
             {
@@ -191,121 +185,95 @@ public:
 
     String inferHostSlashModel(String modelPath) override
     {
-        String hostSlashModel;
+        switch (classifyPath(modelPath))
+        {
+            case PathForm::Local:
+            case PathForm::GradioLive:
+                return "localhost";
 
-        if (isValidLocalPath(modelPath) || isValidGradioPath(modelPath))
-        {
-            hostSlashModel = "localhost";
-        }
-        else if (isValidHuggingFacePath(modelPath))
-        {
-            if (isValidShortHuggingFacePath(modelPath))
+            case PathForm::HuggingFaceSubdomain:
             {
                 /* Only the first "-" is known to be the owner boundary. The rest
                    belong to the name, whose original spelling the subdomain does not
                    preserve. This is a best guess for display and for addressing the
                    Hub, which resolveCanonicalPath replaces with the exact spelling. */
-                const String subdomain = modelPath.fromFirstOccurrenceOf("https://", false, false)
-                                             .upToFirstOccurrenceOf(".hf.space", false, false);
+                const String subdomain = getSpaceSubdomain(modelPath);
 
-                hostSlashModel = subdomain.upToFirstOccurrenceOf("-", false, false) + "/"
-                                 + subdomain.fromFirstOccurrenceOf("-", false, false);
+                return subdomain.upToFirstOccurrenceOf("-", false, false) + "/"
+                       + subdomain.fromFirstOccurrenceOf("-", false, false);
             }
-            else if (isValidLongHuggingFacePath(modelPath))
-            {
-                StringArray array = StringArray::fromTokens(
-                    modelPath.fromFirstOccurrenceOf("https://huggingface.co/spaces/", false, false),
-                    "/",
-                    "");
 
-                hostSlashModel = array[0] + "/" + array[1];
-            }
-            else if (isValidAbbrevHuggingFacePath(modelPath))
-            {
-                hostSlashModel = modelPath;
-            }
-        }
-        else
-        {
-            DBG_AND_LOG("GradioClient::inferHostSlashModel: Path \""
-                        << modelPath << "\" does not match valid specification for Gradio.");
+            case PathForm::HuggingFacePage:
+                return modelPath.fromFirstOccurrenceOf(spacesPageURL, false, false);
+
+            case PathForm::HuggingFaceId:
+                return modelPath;
+
+            case PathForm::Unknown:
+                break;
         }
 
-        return hostSlashModel;
+        DBG_AND_LOG("GradioClient::inferHostSlashModel: Path \""
+                    << modelPath << "\" does not match valid specification for Gradio.");
+
+        return {};
     }
 
     String inferEndpointPath(String modelPath) override
     {
-        String endpointPath;
-
-        if (isValidLocalPath(modelPath))
+        switch (classifyPath(modelPath))
         {
-            endpointPath = modelPath;
+            case PathForm::Local:
+                return modelPath.startsWith("http://") ? modelPath : "http://" + modelPath;
 
-            if (! endpointPath.startsWith("http://"))
-            {
-                endpointPath = "http://" + endpointPath;
-            }
-        }
-        else if (isValidGradioPath(modelPath))
-        {
-            endpointPath = modelPath;
-        }
-        else if (isValidHuggingFacePath(modelPath))
-        {
-            if (isValidShortHuggingFacePath(modelPath))
-            {
-                endpointPath = modelPath;
-            }
-            else if (isValidLongHuggingFacePath(modelPath)
-                     || isValidAbbrevHuggingFacePath(modelPath))
-            {
-                String hostSlashModel = inferHostSlashModel(modelPath);
+            case PathForm::GradioLive:
+            case PathForm::HuggingFaceSubdomain:
+                return modelPath;
 
-                auto array = StringArray::fromTokens(hostSlashModel, "/", "");
+            case PathForm::HuggingFacePage:
+            case PathForm::HuggingFaceId:
+            {
+                auto array = StringArray::fromTokens(inferHostSlashModel(modelPath), "/", "");
 
                 String host = array[0];
                 String model = array[1];
 
-                endpointPath = "https://" + host + "-" + model.replace("_", "-") + ".hf.space/";
+                return "https://" + host + "-" + model.replace("_", "-") + spaceHostSuffix + "/";
             }
-        }
-        else
-        {
-            DBG_AND_LOG("GradioClient::inferEndpointPath: Path \""
-                        << modelPath << "\" does not match valid specification for Gradio.");
+
+            case PathForm::Unknown:
+                break;
         }
 
-        return endpointPath;
+        DBG_AND_LOG("GradioClient::inferEndpointPath: Path \""
+                    << modelPath << "\" does not match valid specification for Gradio.");
+
+        return {};
     }
 
     String inferDocumentationPath(String modelPath) override
     {
-        String documentationPath;
+        switch (classifyPath(modelPath))
+        {
+            case PathForm::Local:
+            case PathForm::GradioLive:
+                return inferEndpointPath(modelPath);
 
-        if (isValidLocalPath(modelPath) || isValidGradioPath(modelPath))
-        {
-            documentationPath = inferEndpointPath(modelPath);
-        }
-        else if (isValidHuggingFacePath(modelPath))
-        {
-            if (isValidShortHuggingFacePath(modelPath) || isValidAbbrevHuggingFacePath(modelPath))
-            {
-                documentationPath =
-                    "https://huggingface.co/spaces/" + inferHostSlashModel(modelPath);
-            }
-            else if (isValidLongHuggingFacePath(modelPath))
-            {
-                documentationPath = modelPath;
-            }
-        }
-        else
-        {
-            DBG_AND_LOG("GradioClient::inferDocumentationPath: Path \""
-                        << modelPath << "\" does not match valid specification for Gradio.");
+            case PathForm::HuggingFaceSubdomain:
+            case PathForm::HuggingFaceId:
+                return spacesPageURL + inferHostSlashModel(modelPath);
+
+            case PathForm::HuggingFacePage:
+                return modelPath;
+
+            case PathForm::Unknown:
+                break;
         }
 
-        return documentationPath;
+        DBG_AND_LOG("GradioClient::inferDocumentationPath: Path \""
+                    << modelPath << "\" does not match valid specification for Gradio.");
+
+        return {};
     }
 
     OpResult validateToken(const String& tokenToValidate) override
@@ -366,27 +334,13 @@ public:
 
     OpResult queryControls(String modelPath, DynamicObject::Ptr& controls) override
     {
-        String responseJSON;
-
-        OpResult result = makeRequest(modelPath, "controls", emptyJSONBody, responseJSON);
-
-        if (result.failed())
-        {
-            return result;
-        }
-
         Array<var> dataList;
 
-        result = stringJSONToList(responseJSON, dataList);
+        OpResult result = requestOutputs(modelPath, "controls", emptyJSONBody, dataList);
 
         if (result.failed())
         {
             return result;
-        }
-
-        if (dataList.isEmpty())
-        {
-            return OpResult::fail(JsonError { JsonError::Type::Empty, {} });
         }
 
         var first = dataList.getFirst();
@@ -475,34 +429,18 @@ public:
                      std::vector<File>& outputFiles,
                      LabelList& labels) override
     {
-        String responseJSON;
-
-        OpResult result =
-            makeRequest(modelPath, "process", payloadJSON, responseJSON, processTimeoutMs);
-
-        if (result.failed())
-        {
-            return result;
-        }
-
         Array<var> dataList;
 
-        result = stringJSONToList(responseJSON, dataList);
+        OpResult result =
+            requestOutputs(modelPath, "process", payloadJSON, dataList, processTimeoutMs);
 
         if (result.failed())
         {
             return result;
         }
 
-        if (dataList.isEmpty())
+        for (const var& outputVar : dataList)
         {
-            return OpResult::fail(JsonError { JsonError::Type::Empty, {} });
-        }
-
-        for (int i = 0; i < dataList.size(); i++)
-        {
-            var outputVar = dataList.getReference(i);
-
             DynamicObject::Ptr outputDict = outputVar.getDynamicObject();
 
             // JUCE counts an array as an object too, so only the pointer tells a dictionary apart
@@ -512,58 +450,50 @@ public:
                     JsonError { JsonError::Type::NotADictionary, outputVar.toString() });
             }
 
+            DynamicObject::Ptr metadata;
+
             static const Identifier metadataKey { "meta" };
 
-            if (outputDict->hasProperty(metadataKey))
+            result = getRequiredDictProperty(outputDict, metadataKey, metadata);
+
+            if (result.failed())
             {
-                var metadata = outputDict->getProperty(metadataKey);
+                return result;
+            }
 
-                if (metadata.getDynamicObject() == nullptr)
+            static const Identifier typeKey { "_type" };
+
+            const String outputType = metadata->getProperty(typeKey).toString();
+
+            if (outputType == "gradio.FileData")
+            {
+                File outputFile;
+
+                String remotePath = outputDict->getProperty("url").toString();
+
+                result = downloadFile(remotePath, outputFile);
+
+                if (result.failed())
                 {
-                    return OpResult::fail(
-                        JsonError { JsonError::Type::NotADictionary, metadata.toString() });
+                    return result;
                 }
 
-                static const Identifier typeKey { "_type" };
+                outputFiles.push_back(outputFile);
+            }
+            else if (outputType == "pyharp.LabelList")
+            {
+                result = extractLabels(outputDict, labels);
 
-                String outputType = metadata.getDynamicObject()->getProperty(typeKey).toString();
-
-                if (outputType == "gradio.FileData")
+                if (result.failed())
                 {
-                    File outputFile;
-
-                    String remotePath = outputDict->getProperty("url").toString();
-
-                    result = downloadFile(remotePath, outputFile);
-
-                    if (result.failed())
-                    {
-                        return result;
-                    }
-
-                    outputFiles.push_back(outputFile);
-                }
-                else if (outputType == "pyharp.LabelList")
-                {
-                    result = extractLabels(outputDict, labels);
-
-                    if (result.failed())
-                    {
-                        return result;
-                    }
-                }
-                else
-                {
-                    // Possibly from a newer pyharp, so it is left out rather than failing
-                    DBG_AND_LOG("GradioClient::process: Ignoring output of unknown type \""
-                                << outputType << "\".");
+                    return result;
                 }
             }
             else
             {
-                return OpResult::fail(JsonError { JsonError::Type::MissingKey,
-                                                  JSON::toString(var(outputDict), true),
-                                                  metadataKey.toString() });
+                // Possibly from a newer pyharp, so it is left out rather than failing
+                DBG_AND_LOG("GradioClient::process: Ignoring output of unknown type \""
+                            << outputType << "\".");
             }
         }
 
@@ -578,22 +508,92 @@ public:
     }
 
 private:
-    static bool isValidLocalPath(String modelPath)
-    {
-        /*
-          e.g., "http://localhost:7860" or "http://127.0.0.1:7860"
-        */
+    // The addresses of Hugging Face from which the forms of a path are built
+    static constexpr const char* spacesPageURL = "https://huggingface.co/spaces/";
+    static constexpr const char* spacesAPIURL = "https://huggingface.co/api/spaces/";
+    static constexpr const char* spaceHostSuffix = ".hf.space";
 
-        return modelPath.contains("localhost") || modelPath.matchesWildcard("*.*.*.*:*", true);
+    // The forms a model path can take, in the order in which a path is tested for them
+    enum class PathForm
+    {
+        Local, // e.g., "http://localhost:7860" or "http://127.0.0.1:7860"
+        GradioLive, // e.g., "https://<RANDOM_STRING>.gradio.live"
+        HuggingFaceSubdomain, // e.g., "https://xribene-midi-pitch-shifter.hf.space"
+        HuggingFacePage, // e.g., "https://huggingface.co/spaces/xribene/midi_pitch_shifter"
+        HuggingFaceId, // e.g., "xribene/midi_pitch_shifter"
+        Unknown
+    };
+
+    /* The one place that decides what a path is. Everything that treats the forms
+       differently asks here, so that no two methods can disagree about a path that
+       resembles more than one form. */
+    static PathForm classifyPath(const String& modelPath)
+    {
+        if (modelPath.contains("localhost") || modelPath.matchesWildcard("*.*.*.*:*", true))
+        {
+            return PathForm::Local;
+        }
+
+        if (modelPath.startsWith("https://") && modelPath.endsWith(".gradio.live"))
+        {
+            return PathForm::GradioLive;
+        }
+
+        /* The owner and the name are joined by a "-", so at least one is needed for
+           this to name a Space at all. Where that "-" falls, and which of the others
+           were underscores, cannot be told from the address. resolveCanonicalPath
+           asks the running app which Space it is rather than guessing. */
+        if (getSpaceSubdomain(modelPath).containsChar('-'))
+        {
+            return PathForm::HuggingFaceSubdomain;
+        }
+
+        if (modelPath.startsWith(spacesPageURL)
+            && isSpaceId(modelPath.fromFirstOccurrenceOf(spacesPageURL, false, false)))
+        {
+            return PathForm::HuggingFacePage;
+        }
+
+        if (isSpaceId(modelPath))
+        {
+            return PathForm::HuggingFaceId;
+        }
+
+        return PathForm::Unknown;
     }
 
-    static bool isValidGradioPath(String modelPath)
+    static bool isHuggingFaceForm(PathForm form)
     {
-        /*
-          e.g., "https://<RANDOM_STRING>.gradio.live"
-        */
+        return form == PathForm::HuggingFaceSubdomain || form == PathForm::HuggingFacePage
+               || form == PathForm::HuggingFaceId;
+    }
 
-        return modelPath.startsWith("https://") && modelPath.endsWith(".gradio.live");
+    static bool isHuggingFacePath(const String& modelPath)
+    {
+        return isHuggingFaceForm(classifyPath(modelPath));
+    }
+
+    // Whether a string has the form of a Space id, e.g., "xribene/midi_pitch_shifter"
+    static bool isSpaceId(const String& text)
+    {
+        return StringArray::fromTokens(text, "/", "").size() == 2;
+    }
+
+    /* The part of a Space address that stands for its owner and name, e.g.,
+       "xribene-midi-pitch-shifter", or an empty string for any other address */
+    static String getSpaceSubdomain(const String& modelPath)
+    {
+        /* Without this the lines below are meaningless for any other address:
+           upToFirstOccurrenceOf returns the whole string when the needle is
+           absent, so a page address that happens to contain a single hyphen
+           would be mistaken for a subdomain. */
+        if (! modelPath.contains(spaceHostSuffix))
+        {
+            return {};
+        }
+
+        return modelPath.fromFirstOccurrenceOf("https://", false, false)
+            .upToFirstOccurrenceOf(spaceHostSuffix, false, false);
     }
 
     /* Whether an endpoint may be sent the Hugging Face API key. Hugging Face and this
@@ -607,73 +607,15 @@ private:
                || host == "127.0.0.1";
     }
 
-    static bool isValidHuggingFacePath(String modelPath)
-    {
-        return isValidShortHuggingFacePath(modelPath) || isValidLongHuggingFacePath(modelPath)
-               || isValidAbbrevHuggingFacePath(modelPath);
-    }
-
-    static bool isValidShortHuggingFacePath(String modelPath)
-    {
-        /*
-          e.g., "https://xribene-midi-pitch-shifter.hf.space/"
-        */
-
-        /* Without this the check below is meaningless for any other address:
-           upToFirstOccurrenceOf returns the whole string when the needle is
-           absent, so a long-form path that happens to contain a single hyphen
-           splits into two tokens and is mistaken for a subdomain. */
-        if (! modelPath.contains(".hf.space"))
-        {
-            return false;
-        }
-
-        const String subdomain = modelPath.fromFirstOccurrenceOf("https://", false, false)
-                                     .upToFirstOccurrenceOf(".hf.space", false, false);
-
-        /* The owner and the name are joined by a "-", so at least one is needed for
-           this to name a Space at all. Where that "-" falls, and which of the others
-           were underscores, cannot be told from the address. resolveCanonicalPath
-           asks the running app which Space it is rather than guessing. */
-        return subdomain.isNotEmpty() && subdomain.containsChar('-');
-    }
-
-    static bool isValidLongHuggingFacePath(String modelPath)
-    {
-        /*
-          e.g., "https://huggingface.co/spaces/xribene/midi_pitch_shifter"
-        */
-
-        if (! modelPath.startsWith("https://huggingface.co/spaces/"))
-        {
-            return false;
-        }
-
-        return isValidAbbrevHuggingFacePath(
-            modelPath.fromFirstOccurrenceOf("https://huggingface.co/spaces/", false, false));
-    }
-
-    static bool isValidAbbrevHuggingFacePath(String modelPath)
-    {
-        /*
-          e.g., "xribene/midi_pitch_shifter"
-        */
-
-        StringArray array = StringArray::fromTokens(modelPath, "/", "");
-
-        return array.size() == 2;
-    }
-
     /* The Hub's report on how a Space is currently deployed, covering both its
        lifecycle stage and its hardware. Returns false when it cannot be obtained,
        which the callers treat as "unknown" rather than as a verdict. */
     bool querySpaceRuntime(const String& modelPath, DynamicObject::Ptr& runtime)
     {
-        if (! isValidHuggingFacePath(modelPath))
+        if (! isHuggingFacePath(modelPath))
             return false;
 
-        URL runtimeEndpoint =
-            URL("https://huggingface.co/api/spaces/" + inferHostSlashModel(modelPath) + "/runtime");
+        URL runtimeEndpoint = URL(spacesAPIURL + inferHostSlashModel(modelPath) + "/runtime");
 
         std::unique_ptr<InputStream> stream;
 
@@ -745,20 +687,18 @@ private:
         if (createRequestStream(host, options) == nullptr)
             return {};
 
-        static const String spacesPrefix { "https://huggingface.co/spaces/" };
-
         /* Several link headers can be sent at once and are joined into one value, so
            the canonical entry is picked out rather than the header taken whole. */
         for (const String& entry : StringArray::fromTokens(responseHeaders["link"], ",", "\"'"))
         {
-            if (! entry.contains("canonical") || ! entry.contains(spacesPrefix))
+            if (! entry.contains("canonical") || ! entry.contains(spacesPageURL))
                 continue;
 
-            const String advertised = entry.fromFirstOccurrenceOf(spacesPrefix, false, false)
+            const String advertised = entry.fromFirstOccurrenceOf(spacesPageURL, false, false)
                                           .upToFirstOccurrenceOf(">", false, false)
                                           .trim();
 
-            if (isValidAbbrevHuggingFacePath(advertised))
+            if (isSpaceId(advertised))
                 return advertised;
         }
 
@@ -767,7 +707,7 @@ private:
 
     bool isZeroGPUSpace(const String& modelPath)
     {
-        if (! isValidHuggingFacePath(modelPath))
+        if (! isHuggingFacePath(modelPath))
             return false;
 
         // The hardware type is a static property of the Space, so it is cached to
@@ -1264,8 +1204,8 @@ private:
                         errorType = GradioError::Type::Indeterminate;
                     }
 
-                    return OpResult::fail(GradioError {
-                        errorType, errorPath, reason, isValidHuggingFacePath(modelPath) });
+                    return OpResult::fail(
+                        GradioError { errorType, errorPath, reason, isHuggingFacePath(modelPath) });
                 }
             }
             else if (eventLine.startsWithIgnoreCase("data:"))
@@ -1293,7 +1233,7 @@ private:
             return OpResult::fail(GradioError { GradioError::Type::IncompleteResponse,
                                                 errorPath,
                                                 "",
-                                                isValidHuggingFacePath(modelPath) });
+                                                isHuggingFacePath(modelPath) });
         }
 
         return OpResult::ok();
@@ -1405,6 +1345,38 @@ private:
                               inferDocumentationPath(modelPath),
                               timeoutMs,
                               modelPath);
+    }
+
+    /* Calls an endpoint of the app and parses the list of outputs in its answer, which
+       holds at least one */
+    OpResult requestOutputs(const String& modelPath,
+                            const String& requestType,
+                            const String& body,
+                            Array<var>& outputs,
+                            const int timeoutMs = controlsTimeoutMs)
+    {
+        String responseJSON;
+
+        OpResult result = makeRequest(modelPath, requestType, body, responseJSON, timeoutMs);
+
+        if (result.failed())
+        {
+            return result;
+        }
+
+        result = stringJSONToList(responseJSON, outputs);
+
+        if (result.failed())
+        {
+            return result;
+        }
+
+        if (outputs.isEmpty())
+        {
+            return OpResult::fail(JsonError { JsonError::Type::Empty, {} });
+        }
+
+        return OpResult::ok();
     }
 
     /* The label a "label_type" declares, with whatever is particular to that type filled
