@@ -18,6 +18,7 @@
 
 #include "../utils/Interface.h"
 #include "../utils/Logging.h"
+#include "../utils/Messages.h"
 
 #include "../windows/tutorial/TutorialTargets.h"
 
@@ -341,6 +342,9 @@ public:
                                         return;
                                     }
 
+                                    // The DAW keeps no other version of a file that it passed to HARP
+                                    const File backupFile = backUpFile(originalFile);
+
                                     bool successfulOverwrite = false;
 
                                     String ext = originalFile.getFileExtension().toLowerCase();
@@ -408,6 +412,13 @@ public:
 
                                     if (successfulOverwrite)
                                     {
+                                        statusMessage->setMessage(
+                                            "Overwrote " + originalFile.getFileName()
+                                            + (backupFile.existsAsFile()
+                                                   ? ". The previous version was kept at "
+                                                         + backupFile.getFullPathName()
+                                                   : String(".")));
+
                                         // Update display with overwritten media
                                         originalTrack->initializeDisplay(URL(originalFile));
 
@@ -545,6 +556,34 @@ private:
         }
     }
 
+    /* Copies a file that is about to be overwritten into the temporary directory of the
+       system, stamped with the time, where it stays until the system clears that directory.
+       Returns the copy, or a file that does not exist if none could be made, which does not
+       stop the overwrite. */
+    static File backUpFile(const File& file)
+    {
+        const File backupFolder =
+            File::getSpecialLocation(File::tempDirectory).getChildFile("HARP Backups");
+
+        const File backupFile = backupFolder.getChildFile(
+            file.getFileNameWithoutExtension() + "_"
+            + Time::getCurrentTime().formatted("%m-%d-%Y_%H-%M-%S") + file.getFileExtension());
+
+        if (backupFolder.createDirectory().failed() || ! file.copyFileTo(backupFile))
+        {
+            DBG_AND_LOG("MediaClipboardWidget::backUpFile: Could not back up \""
+                        << file.getFullPathName() << "\" before overwriting it.");
+
+            return {};
+        }
+
+        DBG_AND_LOG("MediaClipboardWidget::backUpFile: Backed up \""
+                    << file.getFullPathName() << "\" to \"" << backupFile.getFullPathName()
+                    << "\".");
+
+        return backupFile;
+    }
+
     bool convertAudioFile(const File& source, const File& target)
     {
         AudioFormatManager formatManager;
@@ -589,13 +628,17 @@ private:
             return false;
         }
 
+        /* Every format written here holds 16 and 24 bits, and 24 keeps what a source of
+           more than 16 bits, floating point included, would lose at 16 */
+        const int bitsPerSample = reader->bitsPerSample > 16 ? 24 : 16;
+
         // Takes ownership of the stream only if it succeeds
         std::unique_ptr<AudioFormatWriter> writer =
             format->createWriterFor(outputStream,
                                     AudioFormatWriterOptions {}
                                         .withSampleRate(reader->sampleRate)
                                         .withNumChannels((int) reader->numChannels)
-                                        .withBitsPerSample(16));
+                                        .withBitsPerSample(bitsPerSample));
 
         if (! writer)
         {
@@ -732,4 +775,6 @@ private:
     std::unique_ptr<FileChooser> chooseFileBrowser;
 
     MediaDisplayComponent* currentlySelectedDisplay = nullptr;
+
+    SharedResourcePointer<StatusMessage> statusMessage;
 };

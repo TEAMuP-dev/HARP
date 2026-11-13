@@ -610,7 +610,7 @@ private:
 
         processCancelButton.setMode(cancelButtonInfo.displayLabel);
 
-        // Switch choose-file button to inactive mode on all tracks during processing
+        // Input tracks take no other file, by button or by drop, while theirs is processed
         inputTrackAreaWidget.setLoadTrackEnabled(false);
 
         uint64_t processID = currentProcessID;
