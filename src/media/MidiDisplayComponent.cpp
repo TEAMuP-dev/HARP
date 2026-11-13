@@ -17,7 +17,8 @@ MidiDisplayComponent::MidiDisplayComponent(String name, bool req, bool fromDAW, 
     const String pitchModifier = "Ctrl";
 #endif
 
-    mediaInstructions = "MIDI piano roll.\nClick or drag to move the playback position.\n"
+    mediaInstructions = "MIDI piano roll, colored by instrument. The bar within a note shows its "
+                        "velocity.\nClick or drag to move the playback position.\n"
                         "Scroll to zoom in time, or hold Shift while scrolling to pan.\nHold "
                         + pitchModifier + " while scrolling to zoom in pitch, or " + pitchModifier
                         + "+Shift to move through pitch.";
@@ -219,20 +220,18 @@ void MidiDisplayComponent::mouseWheelMove(const MouseEvent& evt, const MouseWhee
 
     if (! isThumbnailTrack() && commandMod)
     {
-        if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX))
+        if (shiftMod)
         {
-            if (shiftMod)
-            {
-                verticalMove(-static_cast<double>(wheel.deltaY));
-            }
-            else
-            {
-                verticalZoom(static_cast<double>(wheel.deltaY) / 2.0);
-            }
+            /* macOS turns a vertical scroll into a horizontal one while Shift is held, so
+               whichever axis the wheel reports is taken as the one that was turned */
+            const float delta =
+                std::abs(wheel.deltaX) > std::abs(wheel.deltaY) ? wheel.deltaX : wheel.deltaY;
+
+            verticalMove(-static_cast<double>(delta));
         }
-        else
+        else if (std::abs(wheel.deltaY) > 2 * std::abs(wheel.deltaX))
         {
-            // Do nothing
+            verticalZoom(static_cast<double>(wheel.deltaY) / 2.0);
         }
     }
     else if (getTotalLengthInSecs() > 0.0)

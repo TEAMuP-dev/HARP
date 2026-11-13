@@ -2,27 +2,28 @@
  * @file SynthAudioSource.h
  * @brief Handles MIDI playback for pianoroll.
  * @author nathanpruyne, cwitkowitz
- * 
+ *
  * Note that this file was adapted from:
  * https://juce.com/tutorials/tutorial_synth_using_midi_input/
  */
 
+#pragma once
+
+#include <atomic>
+#include <cmath>
+
 #include <juce_audio_basics/juce_audio_basics.h>
 
-#include "../../utils/Logging.h"
+using namespace juce;
 
 struct SineWaveSound : public SynthesiserSound
 {
-    SineWaveSound() {}
-
     bool appliesToNote(int) override { return true; }
     bool appliesToChannel(int) override { return true; }
 };
 
 struct SineWaveVoice : public SynthesiserVoice
 {
-    SineWaveVoice() {}
-
     // Only the float overload is rendered, and the double one stays as JUCE defines it
     using SynthesiserVoice::renderNextBlock;
 
@@ -36,21 +37,21 @@ struct SineWaveVoice : public SynthesiserVoice
                    SynthesiserSound*,
                    int /*currentPitchWheelPosition*/) override
     {
+        const double cyclesPerSecond = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
+        const double cyclesPerSample = cyclesPerSecond / getSampleRate();
+
         currentAngle = 0.0;
-
-        double cyclesPerSecond = MidiMessage::getMidiNoteInHertz(midiNoteNumber);
-        double cyclesPerSample = cyclesPerSecond / getSampleRate();
-
-        angleDelta = cyclesPerSample * 2.0 * MathConstants<double>::pi;
+        angleDelta = cyclesPerSample * MathConstants<double>::twoPi;
 
         tailOff = 0.0;
-        level = static_cast<double>(velocity) * 0.15;
+        level = static_cast<double>(velocity) * maximumLevel;
     }
 
     void stopNote(float /*velocity*/, bool allowTailOff) override
     {
         if (allowTailOff)
         {
+            // Begins the release, unless the note is already in it
             if (exactlyEqual(tailOff, 0.0))
             {
                 tailOff = 1.0;
@@ -69,167 +70,211 @@ struct SineWaveVoice : public SynthesiserVoice
 
     void renderNextBlock(AudioSampleBuffer& outputBuffer, int startSample, int numSamples) override
     {
-        if (! exactlyEqual(angleDelta, 0.0))
+        // A voice with no note has no angle to advance
+        if (exactlyEqual(angleDelta, 0.0))
         {
-            if (tailOff > 0.0)
+            return;
+        }
+
+        const bool isReleasing = tailOff > 0.0;
+
+        while (--numSamples >= 0)
+        {
+            const double gain = isReleasing ? level * tailOff : level;
+            const float currentSample = static_cast<float>(std::sin(currentAngle) * gain);
+
+            for (int channel = outputBuffer.getNumChannels(); --channel >= 0;)
             {
-                while (--numSamples >= 0)
-                {
-                    float currentSample =
-                        static_cast<float>(std::sin(currentAngle) * level * tailOff);
-
-                    for (int i = outputBuffer.getNumChannels(); --i >= 0;)
-                    {
-                        outputBuffer.addSample(i, startSample, currentSample);
-                    }
-
-                    currentAngle += angleDelta;
-
-                    ++startSample;
-
-                    tailOff *= 0.99;
-
-                    if (tailOff <= 0.005)
-                    {
-                        clearCurrentNote();
-
-                        angleDelta = 0.0;
-
-                        break;
-                    }
-                }
+                outputBuffer.addSample(channel, startSample, currentSample);
             }
-            else
+
+            currentAngle += angleDelta;
+
+            ++startSample;
+
+            if (isReleasing)
             {
-                while (--numSamples >= 0)
+                tailOff *= tailOffDecay;
+
+                if (tailOff <= tailOffFloor)
                 {
-                    auto currentSample = static_cast<float>(std::sin(currentAngle) * level);
+                    clearCurrentNote();
 
-                    for (auto i = outputBuffer.getNumChannels(); --i >= 0;)
-                    {
-                        outputBuffer.addSample(i, startSample, currentSample);
-                    }
+                    angleDelta = 0.0;
 
-                    currentAngle += angleDelta;
-
-                    ++startSample;
+                    break;
                 }
             }
         }
     }
 
 private:
+    // Level of a note at full velocity, which leaves room for several to sound at once
+    static constexpr double maximumLevel = 0.15;
+    // Factor applied to a released note on each sample, and the level at which it ends
+    static constexpr double tailOffDecay = 0.99;
+    static constexpr double tailOffFloor = 0.005;
+
     double currentAngle = 0.0;
     double angleDelta = 0.0;
     double tailOff = 0.0;
     double level = 0.0;
 };
 
+/**
+ * Plays a MIDI sequence, timed in seconds, through one sine voice per simultaneous note.
+ *
+ * The audio thread reads from this while the message thread moves the position, so the
+ * position is atomic. A move is taken up at the start of the next block: every voice is
+ * silenced, and the notes that are sounding at the new position start again, which would
+ * otherwise stay silent until their next onset.
+ */
 class SynthAudioSource : public PositionableAudioSource
 {
 public:
     SynthAudioSource() { synth.addSound(new SineWaveSound()); }
 
-    void prepareToPlay(int samplesPerBlockExpected, double sr) override
+    void prepareToPlay(int /*samplesPerBlockExpected*/, double newSampleRate) override
     {
-        synth.setCurrentPlaybackSampleRate(sr);
-        sampleRate = sr;
-        samplesPerBlock = samplesPerBlockExpected;
+        sampleRate = newSampleRate;
+
+        synth.setCurrentPlaybackSampleRate(newSampleRate);
     }
 
     void releaseResources() override {}
 
-    void useSequence(MidiMessageSequence midiSequence)
+    /**
+     * Sets the sequence to play. The transport must not be reading from this source at the
+     * time, i.e. this source must not be the one it has been given.
+     */
+    void useSequence(const MidiMessageSequence& midiSequence)
     {
         sequence = midiSequence;
 
+        // Pairs each note-on with the note-off that ends it, on which a move relies
+        sequence.updateMatchedPairs();
+
         int maxVoices = 0;
-        int currVoices = 0;
+        int currentVoices = 0;
 
-        // Get max number of voices needed and add that many voices
-        for (int eventIdx = 0; eventIdx < sequence.getNumEvents(); ++eventIdx)
+        // One voice for each of the most notes that ever sound at once
+        for (const auto* midiEvent : sequence)
         {
-            const auto midiEvent = sequence.getEventPointer(eventIdx);
-            const auto& midiMessage = midiEvent->message;
-
-            double startTime = midiEvent->message.getTimeStamp();
-
-            lastStartTime = startTime;
-
-            if (midiMessage.isNoteOn())
+            if (midiEvent->message.isNoteOn())
             {
-                currVoices++;
-                if (currVoices > maxVoices)
-                {
-                    maxVoices = currVoices;
-                }
+                maxVoices = jmax(maxVoices, ++currentVoices);
             }
-
-            if (midiMessage.isNoteOff())
+            else if (midiEvent->message.isNoteOff())
             {
-                currVoices--;
+                currentVoices = jmax(0, currentVoices - 1);
             }
         }
 
         synth.clearVoices();
 
-        for (auto i = 0; i < maxVoices; ++i)
+        for (int i = 0; i < maxVoices; ++i)
         {
             synth.addVoice(new SineWaveVoice());
         }
+
+        readPosition = 0;
+
+        resetNotes();
     }
 
     void getNextAudioBlock(const AudioSourceChannelInfo& bufferToFill) override
     {
         bufferToFill.clearActiveBufferRegion();
 
-        MidiBuffer incomingMidi;
+        // Read before the position, so that a move made between the two is taken up next block
+        const bool wasMoved = needsResync.exchange(false);
 
-        int64 lastSample = readPosition + samplesPerBlock;
+        const int64 blockStart = readPosition.load();
+        const int64 blockEnd = blockStart + bufferToFill.numSamples;
 
-        for (int eventIdx = 0; eventIdx < sequence.getNumEvents(); ++eventIdx)
+        MidiBuffer blockEvents;
+
+        if (wasMoved)
         {
-            const auto midiEvent = sequence.getEventPointer(eventIdx);
-            const auto& midiMessage = midiEvent->message;
+            synth.allNotesOff(0, false);
 
-            int startTimeSamples = secondsToSamples(midiEvent->message.getTimeStamp());
+            nextEventIndex = 0;
 
-            if (startTimeSamples >= readPosition && startTimeSamples <= lastSample)
+            // Everything before the block is skipped, apart from the notes still sounding in it
+            while (nextEventIndex < sequence.getNumEvents()
+                   && getEventPosition(nextEventIndex) < blockStart)
             {
-                incomingMidi.addEvent(midiMessage,
-                                      static_cast<int>(startTimeSamples - readPosition));
+                const auto* midiEvent = sequence.getEventPointer(nextEventIndex);
+
+                if (midiEvent->message.isNoteOn() && midiEvent->noteOffObject != nullptr
+                    && secondsToSamples(midiEvent->noteOffObject->message.getTimeStamp())
+                           > blockStart)
+                {
+                    blockEvents.addEvent(midiEvent->message, 0);
+                }
+
+                ++nextEventIndex;
             }
         }
 
+        // The events of this block, each at its offset within the block
+        while (nextEventIndex < sequence.getNumEvents()
+               && getEventPosition(nextEventIndex) < blockEnd)
+        {
+            blockEvents.addEvent(sequence.getEventPointer(nextEventIndex)->message,
+                                 static_cast<int>(getEventPosition(nextEventIndex) - blockStart));
+
+            ++nextEventIndex;
+        }
+
         synth.renderNextBlock(
-            *bufferToFill.buffer, incomingMidi, bufferToFill.startSample, bufferToFill.numSamples);
+            *bufferToFill.buffer, blockEvents, bufferToFill.startSample, bufferToFill.numSamples);
 
-        readPosition += samplesPerBlock;
+        // Advanced only if the position was not moved while this block was rendered
+        int64 expectedPosition = blockStart;
+        readPosition.compare_exchange_strong(expectedPosition, blockEnd);
     }
 
-    void setNextReadPosition(int64 newPosition) override { readPosition = newPosition; }
-
-    int64 getNextReadPosition() const override { return readPosition; }
-
-    int64 getTotalLength() const override
+    void setNextReadPosition(int64 newPosition) override
     {
-        // Location of last MIDI message (likely a note off event)
-        return secondsToSamples(lastStartTime);
+        readPosition = newPosition;
+
+        resetNotes();
     }
+
+    int64 getNextReadPosition() const override { return readPosition.load(); }
+
+    // Up to the last MIDI message, which is likely a note off event
+    int64 getTotalLength() const override { return secondsToSamples(sequence.getEndTime()); }
 
     void setLooping(bool /*shouldLoop*/) override {}
-    bool isLooping() const override { return 0; }
+    bool isLooping() const override { return false; }
 
-    void resetNotes() { synth.allNotesOff(0, false); }
+    /**
+     * Silences every voice at the start of the next block, and starts the notes that are
+     * sounding at the playback position again.
+     */
+    void resetNotes() { needsResync = true; }
 
 private:
-    int secondsToSamples(double secondsTime) const { return (int) (secondsTime * sampleRate); }
+    int64 secondsToSamples(double seconds) const
+    {
+        return static_cast<int64>(seconds * sampleRate.load());
+    }
 
-    double sampleRate;
-    int samplesPerBlock;
-    int64 readPosition;
+    int64 getEventPosition(int eventIndex) const
+    {
+        return secondsToSamples(sequence.getEventPointer(eventIndex)->message.getTimeStamp());
+    }
 
-    double lastStartTime;
+    // Until the device reports its own, so that lengths are meaningful before playback
+    std::atomic<double> sampleRate { 44100.0 };
+
+    std::atomic<int64> readPosition { 0 };
+    std::atomic<bool> needsResync { true };
+
+    // The first event that has not been played yet, which only the audio thread touches
+    int nextEventIndex = 0;
 
     MidiMessageSequence sequence;
     Synthesiser synth;
