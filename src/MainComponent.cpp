@@ -226,7 +226,8 @@ void MainComponent::openSettingsWindow(std::optional<Provider> focusProvider)
 {
     DialogWindow::LaunchOptions options;
     options.dialogTitle = "Settings";
-    options.dialogBackgroundColour = Colours::darkgrey;
+    options.dialogBackgroundColour =
+        getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground);
     // The settings dialog is a free-standing desktop window that can outlive this
     // component, so guard the callback with a SafePointer
     Component::SafePointer<MainComponent> safeThis(this);
@@ -394,7 +395,8 @@ void MainComponent::openAboutWindow()
 
     DialogWindow::LaunchOptions options;
     options.dialogTitle = "About " + String(APP_NAME);
-    options.dialogBackgroundColour = Colours::grey;
+    options.dialogBackgroundColour =
+        getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground);
     options.content.setOwned(aboutComponent.release());
 
     options.useNativeTitleBar = true;

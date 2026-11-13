@@ -10,7 +10,10 @@
 
 #include "../../clients/Client.h"
 
+#include "../../gui/Palette.h"
+
 #include "../../utils/Clients.h"
+#include "../../utils/Interface.h"
 #include "../../utils/Logging.h"
 #include "../../utils/Settings.h"
 
@@ -49,6 +52,8 @@ private:
     const float gapSize = 10;
     const float rowHeight = 26;
     const float buttonWidth = 120;
+    // Space around the contents, as around the General tab
+    static constexpr int pagePadding = 14;
 
     // Character used to obscure the API key in the editor
     static constexpr juce_wchar passwordCharacter = 0x2022; // Bullet
@@ -126,6 +131,8 @@ private:
                           bool rowIsSelected) override;
 
     void selectedRowsChanged(int row) override;
+
+    static constexpr int sidebarWidth = 120;
 
     ListBox sidebar;
     PageSwitcher loginPages;

@@ -11,6 +11,10 @@
 #include "GeneralSettingsTab.h"
 #include "LoginTab.h"
 
+#include "../../gui/TabBarLookAndFeel.h"
+
+#include "../../utils/Interface.h"
+
 using namespace juce;
 
 class SettingsWindow : public Component
@@ -19,21 +23,28 @@ public:
     explicit SettingsWindow(std::function<void()> onRestoreDefaults = {})
         : tabComponent(TabbedButtonBar::TabsAtTop)
     {
-        tabComponent.addTab(
-            "General", Colours::darkgrey, new GeneralSettingsTab(onRestoreDefaults), true);
+        // The tabs and background of the main window
+        const Colour background =
+            getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground);
+
+        tabComponent.getTabbedButtonBar().setLookAndFeel(&tabsLookAndFeel);
+        tabComponent.setColour(TabbedComponent::backgroundColourId, background);
+        tabComponent.setOutline(0);
+
+        tabComponent.addTab("General", background, new GeneralSettingsTab(onRestoreDefaults), true);
 
         // Recorded as the tab is added rather than assumed, so that reordering the tabs
         // cannot leave this addressing the wrong one
         apiKeysTab = new LoginTab();
         apiKeysTabIndex = tabComponent.getNumTabs();
 
-        tabComponent.addTab("API Keys", Colours::darkgrey, apiKeysTab, true);
+        tabComponent.addTab("API Keys", background, apiKeysTab, true);
         addAndMakeVisible(tabComponent);
 
-        setSize(400, 300);
+        setSize(windowWidth, windowHeight);
     }
 
-    ~SettingsWindow() override = default;
+    ~SettingsWindow() override { tabComponent.getTabbedButtonBar().setLookAndFeel(nullptr); }
 
     void resized() override { tabComponent.setBounds(getLocalBounds()); }
 
@@ -48,6 +59,12 @@ public:
     }
 
 private:
+    static constexpr int windowWidth = 480;
+    static constexpr int windowHeight = 300;
+
+    // Declared before the tabs, which it has to outlive
+    TabBarLookAndFeel tabsLookAndFeel;
+
     TabbedComponent tabComponent;
 
     // Owned by the TabbedComponent, held here only to address it

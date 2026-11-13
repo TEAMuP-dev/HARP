@@ -9,6 +9,9 @@
 #include <JuceHeader.h>
 
 #include "../../clients/Client.h"
+
+#include "../../gui/Palette.h"
+
 #include "../../utils/Logging.h"
 #include "../../utils/Settings.h"
 
@@ -30,8 +33,17 @@ private:
 
     std::function<void()> onRestoreDefaults;
 
+    // Space around the contents, and between a row of buttons and what follows it
+    static constexpr int pagePadding = 14;
+    static constexpr int buttonHeight = 28;
+    static constexpr int buttonGap = 8;
+    static constexpr int sectionGap = 12;
+
+    ModelStyle::SectionHeader logHeader { "Log" };
     TextButton openLogFolderButton;
     TextButton clearLogsButton;
+
+    ModelStyle::SectionHeader settingsHeader { "Settings" };
     TextButton openSettingsButton;
     TextButton restoreDefaultsButton;
 

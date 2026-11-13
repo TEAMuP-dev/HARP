@@ -5,6 +5,9 @@
 GeneralSettingsTab::GeneralSettingsTab(std::function<void()> onRestore)
     : onRestoreDefaults(std::move(onRestore))
 {
+    addAndMakeVisible(logHeader);
+    addAndMakeVisible(settingsHeader);
+
     // Set up button to open log folder
     openLogFolderButton.setButtonText("Open Log Folder");
     openLogFolderButton.onClick = [this] { handleOpenLogFolder(); };
@@ -28,18 +31,33 @@ GeneralSettingsTab::GeneralSettingsTab(std::function<void()> onRestore)
 
 void GeneralSettingsTab::resized()
 {
-    Rectangle<int> area = getLocalBounds().reduced(10);
+    FlexBox column;
+    column.flexDirection = FlexBox::Direction::column;
 
-    openLogFolderButton.setBounds(area.removeFromTop(30));
-    area.removeFromTop(10);
+    // A header, followed by a row that its two buttons share evenly
+    FlexBox logButtons;
+    FlexBox settingsButtons;
 
-    clearLogsButton.setBounds(area.removeFromTop(30));
-    area.removeFromTop(10);
+    auto addSection =
+        [&column](Component& header, FlexBox& row, Button& first, Button& second, float marginAbove)
+    {
+        row.items.add(FlexItem(first).withFlex(1));
+        row.items.add(FlexItem(second).withFlex(1).withMargin({ 0, 0, 0, (float) buttonGap }));
 
-    openSettingsButton.setBounds(area.removeFromTop(30));
-    area.removeFromTop(10);
+        column.items.add(FlexItem(header)
+                             .withHeight((float) ModelStyle::sectionHeaderHeight)
+                             .withMargin({ marginAbove, 0, 0, 0 }));
+        column.items.add(FlexItem(row).withHeight((float) buttonHeight).withMargin({ 4, 0, 0, 0 }));
+    };
 
-    restoreDefaultsButton.setBounds(area.removeFromTop(30));
+    addSection(logHeader, logButtons, openLogFolderButton, clearLogsButton, 0.0f);
+    addSection(settingsHeader,
+               settingsButtons,
+               openSettingsButton,
+               restoreDefaultsButton,
+               (float) sectionGap);
+
+    column.performLayout(getLocalBounds().reduced(pagePadding));
 }
 
 void GeneralSettingsTab::handleOpenLogFolder()
