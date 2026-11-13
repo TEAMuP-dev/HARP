@@ -7,11 +7,14 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include "../gui/Palette.h"
+#include "../gui/PopupPanel.h"
+
 #include "../utils/Clients.h"
-#include "../utils/Interface.h"
 #include "../utils/Logging.h"
 
 using namespace juce;
@@ -24,11 +27,10 @@ public:
     {
         pathEditor.setMultiLine(false);
         pathEditor.setReturnKeyStartsNewLine(false);
-        pathEditor.setTextToShowWhenEmpty("e.g., user/space-name or a Gradio URL", Colours::grey);
         pathEditor.onTextChange = [this]
         {
             loadButton.setEnabled(! pathEditor.isEmpty());
-            errorLabel.setText({}, dontSendNotification);
+            showHint();
         };
         pathEditor.onReturnKey = [this]
         {
@@ -37,11 +39,18 @@ public:
                 loadButton.triggerClick();
             }
         };
+        // The editor takes the key itself, which would otherwise close the popup
+        pathEditor.onEscapeKey = [this] { closePopup(); };
         addAndMakeVisible(pathEditor);
 
-        errorLabel.setColour(Label::textColourId, Colours::orange);
-        errorLabel.setJustificationType(Justification::centredLeft);
-        addAndMakeVisible(errorLabel);
+        /* Says what to enter until there is something wrong with what was entered. The editor
+           has the keyboard from the start, so text shown inside it while empty would never be
+           seen. */
+        noteLabel.setFont(ModelStyle::font(13.0f));
+        noteLabel.setJustificationType(Justification::centredLeft);
+        noteLabel.setMinimumHorizontalScale(1.0f);
+        addAndMakeVisible(noteLabel);
+        showHint();
 
         loadButton.setEnabled(false);
         loadButton.onClick = [this] { submit(); };
@@ -62,7 +71,7 @@ public:
             MessageManager::callAsync(
                 [safeThis]
                 {
-                    if (safeThis != nullptr)
+                    if (safeThis != nullptr && safeThis->isShowing())
                         safeThis->pathEditor.grabKeyboardFocus();
                 });
         }
@@ -70,82 +79,53 @@ public:
 
     void resized() override
     {
-        Rectangle<int> fullArea = getLocalBounds();
-
-        /* TopLevelWindow::centreAroundComponent shrinks a dialog to fit the area it
-           is centered within, so this can be laid out smaller than the size asked
-           for. Fixed items would then exceed the space and leave the rest negative. */
-        if (fullArea.isEmpty())
-        {
-            for (auto* child : getChildren())
-                child->setBounds({});
-
-            return;
-        }
-
-        const int editorHeight = jmin(editorRowHeight, fullArea.getHeight());
-
         FlexBox fullPopup;
         fullPopup.flexDirection = FlexBox::Direction::column;
 
-        fullPopup.items.add(FlexItem(pathEditor)
-                                .withHeight((float) editorHeight)
-                                .withMargin(jmin(2.0f, (float) fullArea.getHeight() / 4.0f)));
-
+        fullPopup.items.add(FlexItem(pathEditor).withHeight(editorRowHeight));
         fullPopup.items.add(
-            FlexItem(errorLabel).withHeight((float) errorRowHeight).withMinHeight(0.0f));
+            FlexItem(noteLabel).withHeight(noteRowHeight).withMargin({ 4, 0, 0, 0 }));
+
+        // Whatever height is left over sits between the note and the buttons
+        fullPopup.items.add(FlexItem().withFlex(1));
 
         FlexBox buttonsArea;
         buttonsArea.flexDirection = FlexBox::Direction::row;
+        buttonsArea.justifyContent = FlexBox::JustifyContent::flexEnd;
 
-        // Margins have to shrink with the popup, or they consume more than there is
-        const float buttonMargin =
-            jmin(10.0f, (float) jmin(fullArea.getWidth(), fullArea.getHeight()) / 8.0f);
+        buttonsArea.items.add(FlexItem(cancelButton).withWidth(buttonWidth));
+        buttonsArea.items.add(
+            FlexItem(loadButton).withWidth(buttonWidth).withMargin({ 0, 0, 0, buttonGap }));
 
-        buttonsArea.items.add(FlexItem(loadButton).withFlex(1).withMargin(buttonMargin));
-        buttonsArea.items.add(FlexItem().withFlex(0.25));
-        buttonsArea.items.add(FlexItem(cancelButton).withFlex(1).withMargin(buttonMargin));
+        fullPopup.items.add(FlexItem(buttonsArea).withHeight(buttonRowHeight));
 
-        fullPopup.items.add(FlexItem(buttonsArea).withFlex(1).withMinHeight(0.0f));
-
-        fullPopup.performLayout(fullArea);
-
-        // FlexBox can still hand out negative sizes when the space runs out
-        for (auto* child : getChildren())
-        {
-            if (child->getWidth() < 0 || child->getHeight() < 0)
-            {
-                child->setBounds(child->getBounds().withSize(jmax(0, child->getWidth()),
-                                                             jmax(0, child->getHeight())));
-            }
-        }
-    }
-
-    void paint(Graphics& g) override
-    {
-        g.fillAll(getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground));
+        fullPopup.performLayout(getLocalBounds());
     }
 
     /**
-     * Launches the popup centered around a component. The path entered is passed to
-     * onLoad, reduced to the form its provider recognizes.
+     * Creates the popup, for whatever shows it to own. The path entered is passed to onLoad,
+     * reduced to the form its provider recognizes.
      */
-    static void launch(Component* componentToCentreAround, std::function<void(String)> onLoad)
+    static std::unique_ptr<PopupPanel> createPopup(std::function<void(String)> onLoad)
     {
-        DialogWindow::LaunchOptions options;
-        options.dialogTitle = "Enter Custom Path";
-        options.dialogBackgroundColour = Colours::darkgrey;
-        options.content.setOwned(new CustomPathComponent(std::move(onLoad)));
-
-        options.useNativeTitleBar = false;
-        options.resizable = false;
-        options.escapeKeyTriggersCloseButton = true;
-        options.componentToCentreAround = componentToCentreAround;
-
-        options.launchAsync();
+        return std::make_unique<PopupPanel>(
+            "Enter Custom Path", std::make_unique<CustomPathComponent>(std::move(onLoad)));
     }
 
 private:
+    void showHint()
+    {
+        noteLabel.setColour(Label::textColourId, ModelStyle::secondaryText);
+        noteLabel.setText("A Hugging Face Space (user/space-name), Gradio URL, or local address.",
+                          dontSendNotification);
+    }
+
+    void showProblem(const String& problem)
+    {
+        noteLabel.setColour(Label::textColourId, ModelStyle::problem);
+        noteLabel.setText(problem, dontSendNotification);
+    }
+
     void submit()
     {
         const String path = canonicalizeModelPath(pathEditor.getText().trim());
@@ -153,7 +133,7 @@ private:
         // Caught here rather than by opening a tab that could only fail
         if (! isSupportedModelPath(path))
         {
-            errorLabel.setText("No supported provider recognizes this path.", dontSendNotification);
+            showProblem("No supported provider recognizes this path.");
 
             return;
         }
@@ -170,19 +150,22 @@ private:
 
     void closePopup()
     {
-        if (auto* popup = findParentComponentOfClass<DialogWindow>())
+        if (auto* popup = findParentComponentOfClass<PopupPanel>())
         {
-            popup->exitModalState(0);
+            popup->dismiss();
         }
     }
 
-    static constexpr int popupWidth = 400;
-    static constexpr int popupHeight = 100;
-    static constexpr int editorRowHeight = 30;
-    static constexpr int errorRowHeight = 20;
+    static constexpr int popupWidth = 440;
+    static constexpr int popupHeight = 96;
+    static constexpr float editorRowHeight = 28;
+    static constexpr float noteRowHeight = 20;
+    static constexpr float buttonRowHeight = 26;
+    static constexpr float buttonWidth = 90;
+    static constexpr float buttonGap = 8;
 
     TextEditor pathEditor;
-    Label errorLabel;
+    Label noteLabel;
     TextButton loadButton { "Load" };
     TextButton cancelButton { "Cancel" };
 

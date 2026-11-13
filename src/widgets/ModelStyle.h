@@ -233,46 +233,6 @@ inline int drawBadges(Graphics& g, const std::vector<Badge>& badges, Rectangle<i
     return right + (badges.empty() ? 0 : chipGap);
 }
 
-/* Section headers */
-
-inline constexpr int sectionHeaderHeight = 26;
-
-// Draws a heading followed by a rule to the end of the area, or only the rule where the
-// heading does not fit, since a heading cut short is harder to read than none at all
-inline void drawSectionHeader(Graphics& g, const String& title, Rectangle<int> area)
-{
-    const Font titleFont = font(15.0f, true);
-    const int titleWidth = getTextWidth(titleFont, title);
-
-    int lineX = area.getX();
-
-    if (titleWidth <= area.getWidth())
-    {
-        g.setColour(Colours::white);
-        g.setFont(titleFont);
-        g.drawText(title, area, Justification::centredLeft, false);
-
-        lineX += titleWidth + 10;
-    }
-
-    g.setColour(accent.withAlpha(0.5f));
-    g.fillRect(lineX, area.getCentreY(), jmax(0, area.getRight() - lineX), 1);
-}
-
-class SectionHeader : public Component
-{
-public:
-    explicit SectionHeader(const String& headerTitle) : title(headerTitle)
-    {
-        setInterceptsMouseClicks(false, false);
-    }
-
-    void paint(Graphics& g) override { drawSectionHeader(g, title, getLocalBounds()); }
-
-private:
-    const String title;
-};
-
 /**
  * A row of tag chips, which describes all of the tags in the instructions box while
  * hovering over it (including any that did not fit).

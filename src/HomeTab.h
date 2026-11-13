@@ -595,15 +595,7 @@ public:
         addInstructions(customPathButton,
                         "Click to open a model that is not listed, by its Hugging Face Space, "
                         "Gradio URL, or local address.");
-        customPathButton.onClick = [this]
-        {
-            CustomPathComponent::launch(this,
-                                        [safeThis = SafePointer<HomeTab>(this)](String path)
-                                        {
-                                            if (safeThis != nullptr)
-                                                safeThis->requestOpen(path, {});
-                                        });
-        };
+        customPathButton.onClick = [this] { showCustomPathPopup(); };
         addAndMakeVisible(customPathButton);
 
         searchEditor.setTextToShowWhenEmpty("Search by name, task, tag, or path...", Colours::grey);
@@ -818,6 +810,19 @@ private:
             onModelOpenRequested(path, name);
     }
 
+    void showCustomPathPopup()
+    {
+        customPathPopup = CustomPathComponent::createPopup(
+            [safeThis = SafePointer<HomeTab>(this)](String path)
+            {
+                if (safeThis != nullptr)
+                    safeThis->requestOpen(path, {});
+            });
+
+        customPathPopup->onDismiss = [this] { customPathPopup.reset(); };
+        customPathPopup->showOver(*this);
+    }
+
     // Shows instructions for a component in the instructions box while hovering over it
     void addInstructions(Component& component, const String& instructions)
     {
@@ -843,6 +848,9 @@ private:
     Label noResultsLabel;
 
     std::vector<std::unique_ptr<HoverHandler>> hoverHandlers;
+
+    // Shown over the whole window, and owned here for as long as it is showing
+    std::unique_ptr<PopupPanel> customPathPopup;
 
     SharedResourcePointer<ModelCatalog> catalog;
     SharedResourcePointer<InstructionsMessage> instructionsMessage;

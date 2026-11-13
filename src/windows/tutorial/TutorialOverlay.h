@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <functional>
 #include <vector>
 
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -35,6 +36,10 @@ public:
     }
 
     ~TutorialOverlay() override { area.removeChildComponent(this); }
+
+    /* Called when a popup opens in the area, and again when it closes. The tutorial window
+       floats over the middle of the area, which is where a popup opens. */
+    std::function<void(bool)> onPopupShowingChanged;
 
     // What to highlight, or nothing to dim the whole area
     void setTargets(std::vector<TutorialTargets::Target> newTargets)
@@ -82,6 +87,22 @@ private:
                 located.push_back(bounds.expanded(2).getIntersection(getLocalBounds()));
         }
 
+        // A popup has to stay readable, since this overlay sits in front of it as well
+        const auto popupBounds = TutorialTargets::locate(area, TutorialTargets::popup, {});
+
+        if (! popupBounds.isEmpty())
+        {
+            located.push_back(popupBounds.expanded(2).getIntersection(getLocalBounds()));
+        }
+
+        if (const bool isShowing = ! popupBounds.isEmpty(); isShowing != isPopupShowing)
+        {
+            isPopupShowing = isShowing;
+
+            if (onPopupShowingChanged)
+                onPopupShowingChanged(isShowing);
+        }
+
         if (located != highlights)
         {
             highlights = std::move(located);
@@ -95,4 +116,6 @@ private:
 
     std::vector<TutorialTargets::Target> targets;
     std::vector<Rectangle<int>> highlights;
+
+    bool isPopupShowing = false;
 };
