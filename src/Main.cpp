@@ -6,6 +6,7 @@
 
 #include "MainComponent.h"
 
+#include "utils/Logging.h"
 #include "utils/Settings.h"
 
 #if JUCE_LINUX
@@ -23,15 +24,23 @@ public:
 
         options.applicationName = getApplicationName();
         options.osxLibrarySubFolder = "Application Support/";
-        options.folderName = getApplicationName();
         options.filenameSuffix = ".settings";
         /*
           Settings should be located at:
             - macOS: ~/Library/Application Support/HARP/HARP.settings
-            - Windows: %APPDATA%\HARP\HARP.settings (no need to manually set)
-            - Linux: ~/.config/HARP/HARP.settings (no need to manually set)
+            - Windows: %APPDATA%\HARP\HARP.settings
+            - Linux: ~/.config/HARP/HARP.settings
         */
+#if JUCE_LINUX
+        // The folder is taken relative to the home directory, where it would otherwise sit
+        options.folderName = ".config/" + getApplicationName();
+#else
+        options.folderName = getApplicationName();
+#endif
         options.commonToAllUsers = false;
+
+        moveLegacySettings(options);
+
         applicationProperties.setStorageParameters(options);
 
         // Initialize Settings singleton with our application properties
@@ -56,13 +65,14 @@ public:
      */
     void initialise(const String& commandLine) override
     {
-        debugAndLog("GuiAppApplication::initialise: Invoked with command line \"" + commandLine
-                    + "\".");
-        debugAndLog("GuiAppApplication::getCommandLineParameters(): \"" + getCommandLineParameters()
-                    + "\".");
+        /* Opened before anything is logged. A launch from a DAW cannot be stepped through in a
+           debugger, so the log is the only record of how the app was invoked. */
+        HARPLogger::getInstance()->initializeLogger();
+
+        DBG_AND_LOG("GuiAppApplication::initialise: Invoked with command line \"" << commandLine
+                                                                                  << "\".");
 
         appJustLaunched = true;
-        originalCommandLine = commandLine;
 
         clearLastFocusedWindow();
         Desktop::getInstance().addFocusChangeListener(this);
@@ -82,32 +92,47 @@ public:
             }
         }
 
+        launchFiles = getMediaFiles(commandLine);
+
+        importIntoMainWindow(launchFiles);
+
+        // Assumes app can't be re-invoked manually this soon after the initial launch
+        Timer::callAfterDelay(launchWindowMs, [this]() { appJustLaunched = false; });
+    }
+
+    /**
+     * The files named by a command line, leaving out any argument that is not one.
+     */
+    static Array<File> getMediaFiles(const String& commandLine)
+    {
         StringArray args;
 
         // Split command line arguments at spaces
         args.addTokens(commandLine.trim(), " ", "\"");
 
-        importInitialFiles(args);
+        Array<File> files;
 
-        // Assumes app can't be re-invoked manually within 500ms of initial launch
-        Timer::callAfterDelay(500, [this]() { appJustLaunched = false; });
+        for (const auto& arg : args)
+        {
+            // A relative path is taken from the directory in which the app was started
+            const File file = File::getCurrentWorkingDirectory().getChildFile(arg.unquoted());
+
+            if (file.existsAsFile())
+            {
+                files.addIfNotAlreadyThere(file);
+            }
+        }
+
+        return files;
     }
 
-    void importInitialFiles(StringArray files)
+    void importIntoMainWindow(const Array<File>& files)
     {
-        for (auto f : files)
+        if (auto* mainComp = dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
         {
-            File inputMediaFile(f.unquoted());
-
-            // Check if argument is valid file
-            if (inputMediaFile.existsAsFile())
+            for (const auto& file : files)
             {
-                if (auto* mainComp =
-                        dynamic_cast<MainComponent*>(mainWindow->getContentComponent()))
-                {
-                    // Import file into initialized window
-                    mainComp->importNewFile(inputMediaFile, true);
-                }
+                mainComp->importNewFile(file, true);
             }
         }
     }
@@ -117,14 +142,11 @@ public:
      */
     void anotherInstanceStarted(const String& commandLine) override
     {
-        StringArray args;
-
-        // Split command line arguments at spaces
-        args.addTokens(commandLine.trim(), " ", "\"");
+        const Array<File> files = getMediaFiles(commandLine);
 
         /*
-          With moreThanOneInstanceAllowed() returning false, HARP is actually launched more
-          than once depending on the number of arguments given and the source of the launch.
+          With moreThanOneInstanceAllowed() returning false, a single launch can still arrive
+          here, depending on its source and on the arguments given.
 
           For example, when REAPER launches HARP with file path argument(s), initialise() is
           called once with no arguments and anotherInstanceStarted() is subsequently called
@@ -132,52 +154,57 @@ public:
           arguments, initialise() is called with the argument(s), and anotherInstanceStarted()
           is subsequently called with the same argument(s).
 
-          The following conditional is an ugly solution to an ugly problem...
+          An invocation that arrives while the app is launching is therefore taken as part of
+          the launch. Whichever of its files the launch has not imported yet go to the window
+          it opened, and the rest are the second delivery of files it already has.
 
           See also https://github.com/juce-framework/JUCE/issues/607
         */
         if (appJustLaunched)
         {
-            if (! commandLine.isEmpty() && originalCommandLine.isEmpty())
+            Array<File> newFiles;
+
+            for (const auto& file : files)
             {
-                debugAndLog(
-                    "GuiAppApplication::anotherInstanceStarted: Handling subsequent invocation with command line \""
-                    + commandLine + "\".");
-
-                importInitialFiles(args);
-
-                return;
+                if (! launchFiles.contains(file))
+                {
+                    newFiles.add(file);
+                }
             }
 
-            debugAndLog(
-                "GuiAppApplication::anotherInstanceStarted: Ignoring spurious invocation with command line \""
-                + commandLine + "\".");
+            DBG_AND_LOG("GuiAppApplication::anotherInstanceStarted: Launch invoked again with "
+                        << "command line \"" << commandLine << "\", which names " << newFiles.size()
+                        << " file(s) not imported yet.");
+
+            launchFiles.addArray(newFiles);
+
+            importIntoMainWindow(newFiles);
 
             return;
         }
 
-        debugAndLog(
-            "GuiAppApplication::anotherInstanceStarted: Another instance started with command line \""
-            + commandLine + "\".");
+        DBG_AND_LOG("GuiAppApplication::anotherInstanceStarted: Another instance started with "
+                    << "command line \"" << commandLine << "\".");
 
-        for (auto arg : args)
+        for (const auto& file : files)
         {
-            File inputMediaFile(arg.unquoted());
-
-            // Check if argument is valid file
-            if (inputMediaFile.existsAsFile())
-            {
-                // Choose/handle protocol for additional instances
-                tryOpenChoiceWindow(inputMediaFile);
-            }
+            // Choose/handle protocol for additional instances
+            tryOpenChoiceWindow(file);
         }
     }
 
     void shutdown() override
     {
+        DBG_AND_LOG("GuiAppApplication::shutdown: Closing " << (1 + additionalWindows.size())
+                                                            << " window(s).");
+
         Desktop::getInstance().removeFocusChangeListener(this);
 
-        // Delete our window
+        clearLastFocusedWindow();
+
+        /* Every window is deleted here, while the settings to which they save their position
+           still exist. Left to the destructor, the additional windows would outlive them. */
+        additionalWindows.clear();
         mainWindow = nullptr;
     }
 
@@ -209,10 +236,14 @@ public:
             mainComp->updateWindowConstraints();
 
             // Try to restore saved position and size
-            restoreWindowPosition();
+            restoreWindowState();
 
             setVisible(true);
         }
+
+        /* Saved here rather than only when the close button is pressed, since quitting the app
+           (e.g., from the menu on macOS) deletes its windows without closing them. */
+        ~HARPWindow() override { saveWindowState(); }
 
         /**
          * Hands the constrainer's minimum size to the window manager.
@@ -370,9 +401,6 @@ public:
          */
         void closeButtonPressed() override
         {
-            // Save window position and size before closing
-            saveWindowPosition();
-
             auto* app = dynamic_cast<GuiAppApplication*>(JUCEApplication::getInstance());
 
             if (this == app->getLastFocusedWindowPtr())
@@ -405,62 +433,48 @@ public:
     private:
         String getPrefix() { return "window." + windowIdentifier + "."; }
 
-        void saveWindowPosition()
+        /* The state is the one ResizableWindow keeps, which holds the position and size of the
+           window and whether it fills the display. On Linux it also holds the size of the frame
+           the window manager adds, which is unknown until the window is showing. A window
+           placed by its bounds alone opens lower by the height of its title bar on each
+           launch. */
+        void saveWindowState()
         {
             // Don't save minimized position
             if (! isMinimised())
             {
-                auto bounds = getBounds();
-
-                String prefix = getPrefix();
-
-                // Create property names using window identifier to avoid conflicts
-                Settings::setValue(prefix + "x", bounds.getX());
-                Settings::setValue(prefix + "y", bounds.getY());
-                Settings::setValue(prefix + "width", bounds.getWidth());
-                Settings::setValue(prefix + "height", bounds.getHeight());
-
-                Settings::saveIfNeeded();
+                Settings::setValue(getPrefix() + "state", getWindowStateAsString(), true);
             }
         }
 
-        void restoreWindowPosition()
+        void restoreWindowState()
         {
-            String prefix = getPrefix();
+            const String prefix = getPrefix();
 
-            // Check if we have saved position data
-            if (Settings::containsKey(prefix + "x") && Settings::containsKey(prefix + "y")
-                && Settings::containsKey(prefix + "width")
-                && Settings::containsKey(prefix + "height"))
+            String state = Settings::getString(prefix + "state");
+
+            // Up to 4.0.0 the bounds were saved, each under a key of its own
+            const StringArray legacyKeys { "x", "y", "width", "height" };
+
+            if (state.isEmpty() && Settings::containsKey(prefix + "width"))
             {
-                // Get stored position and size
-                int x = Settings::getIntValue(prefix + "x");
-                int y = Settings::getIntValue(prefix + "y");
-                int width = Settings::getIntValue(prefix + "width");
-                int height = Settings::getIntValue(prefix + "height");
+                StringArray bounds;
 
-                // Validate size
-                width = jmax(100, width);
-                height = jmax(100, height);
-
-                // Create rectangle with the stored bounds
-                Rectangle<int> bounds(x, y, width, height);
-
-                auto displays = Desktop::getInstance().getDisplays();
-
-                // Check if position exists on an available displays
-                if (displays.getDisplayForRect(bounds) != nullptr)
+                for (const auto& key : legacyKeys)
                 {
-                    // Position is valid
-                    setBounds(bounds);
+                    bounds.add(String(Settings::getIntValue(prefix + key)));
                 }
-                else
-                {
-                    // No display found for saved position, so center on main display
-                    centreWithSize(width, height);
-                }
+
+                state = bounds.joinIntoString(" ");
             }
-            else
+
+            for (const auto& key : legacyKeys)
+            {
+                Settings::removeValue(prefix + key);
+            }
+
+            // A state that places the window outside every display is moved onto the nearest
+            if (state.isEmpty() || ! restoreWindowStateFromString(state))
             {
                 // No saved position, so center on screen
                 centreWithSize(getWidth(), getHeight());
@@ -505,26 +519,44 @@ public:
     }
 
 private:
-    /*
-      There's no way to hit breakpoints in Main.cpp when invoking from the DAW,
-      so we use print statements and write to a dedicated log file located at:
-        - macOS: ~/Library/Logs/HARP/launch.log
-        - Windows: C:\Users\<username>\AppData\Roaming\HARP\launch.log
-        - Linux: ~/.config/HARP/launch.log
-    */
-    void debugAndLog(const String& message)
+    /* Moves the settings, and the files HARP keeps beside them, to where they are kept now.
+       Up to 4.0.0 they were in a folder of their own in the home directory on Linux. */
+    static void moveLegacySettings([[maybe_unused]] const PropertiesFile::Options& options)
     {
-        // Write message to standard error stream
-        DBG(message);
+#if JUCE_LINUX
+        const File legacyFolder =
+            File::getSpecialLocation(File::userHomeDirectory).getChildFile(options.applicationName);
+        const File settingsFolder = options.getDefaultFile().getParentDirectory();
 
-        // Get application platform-dependent logs directory
-        File logsDir = FileLogger::getSystemLogFileFolder().getChildFile(getApplicationName());
-        // Ensure log directory exists
-        logsDir.createDirectory();
-        // Create log file if it doesn't exist
-        File debugFile = logsDir.getChildFile("launch.log");
-        // Write message to file
-        debugFile.appendText(message + "\n", true, true);
+        if (! legacyFolder.getChildFile(options.getDefaultFile().getFileName()).existsAsFile()
+            || options.getDefaultFile().existsAsFile())
+        {
+            return;
+        }
+
+        settingsFolder.createDirectory();
+
+        /* Only what HARP wrote there. A folder named after the app in the home directory can
+           hold anything else, a clone of this repository for one. */
+        for (const String& fileName : { options.getDefaultFile().getFileName(),
+                                        String(ModelCatalog::listingFileName),
+                                        String(ModelCatalog::cardsFileName) })
+        {
+            const File source = legacyFolder.getChildFile(fileName);
+            const File target = settingsFolder.getChildFile(fileName);
+
+            if (source.existsAsFile() && ! target.exists())
+            {
+                source.moveFileTo(target);
+            }
+        }
+
+        // Only if nothing else was kept there
+        if (legacyFolder.getNumberOfChildFiles(File::findFilesAndDirectories) == 0)
+        {
+            legacyFolder.deleteFile();
+        }
+#endif
     }
 
     void globalFocusChanged(Component* focusedComponent) override
@@ -545,9 +577,9 @@ private:
                 // Update pointer to most recently focused HARP window
                 lastFocusedWindow = focusedWindow;
 
-                debugAndLog(
+                DBG_AND_LOG(
                     "GuiAppApplication::globalFocusChanged: Last focused window updated to \""
-                    + focusedWindow->getName() + "\".");
+                    << focusedWindow->getName() << "\".");
             }
         }
     }
@@ -682,8 +714,8 @@ private:
                 }
                 else
                 {
-                    debugAndLog(
-                        "GuiAppApplication::handleFileOpenChoice: No window currently focused. Importing file to main window.");
+                    DBG_AND_LOG("GuiAppApplication::handleFileOpenChoice: No window currently "
+                                "focused. Importing file to main window.");
 
                     windowForFileImport = getMainWindowPtr();
                 }
@@ -709,7 +741,11 @@ private:
 
     int windowCounter = 0;
 
-    String originalCommandLine;
+    // How long after starting an invocation is still taken as part of the launch
+    static constexpr int launchWindowMs = 3000;
+
+    // Files the launch has imported, which the same launch may deliver a second time
+    Array<File> launchFiles;
 
     std::atomic<bool> appJustLaunched { false };
     std::atomic<bool> blockNewModalWindows { false };

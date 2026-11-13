@@ -39,7 +39,7 @@ MainComponent::MainComponent()
     mediaClipboardWidget.onPreviewPaneVisibilityChanged = [this]
     {
         Settings::setValue(
-            "view.showPreviewPane", mediaClipboardWidget.isPreviewPaneVisible() ? "1" : "0", true);
+            "view.showPreviewPane", mediaClipboardWidget.isPreviewPaneVisible(), true);
         commandManager.commandStatusChanged();
     };
 
@@ -210,6 +210,10 @@ void MainComponent::updateWindowConstraints()
  */
 void MainComponent::importNewFile(File mediaFile, bool fromDAW)
 {
+    DBG_AND_LOG("MainComponent::importNewFile: Importing \""
+                << mediaFile.getFullPathName() << "\""
+                << (fromDAW ? ", which stays linked to the DAW that opened it." : "."));
+
     mediaClipboardWidget.addTrackFromFilePath(URL(mediaFile), fromDAW);
 
     if (! showMediaClipboard)
@@ -291,9 +295,8 @@ void MainComponent::saveClipboardLayout()
 {
     Settings::setValue("view.mediaClipboardWidth", clipboardWidth);
     Settings::setValue("view.previewPaneHeight", mediaClipboardWidget.getPreviewPaneHeight());
-    Settings::setValue("view.previewPaneMinimized",
-                       mediaClipboardWidget.isPreviewPaneMinimized() ? "1" : "0",
-                       true);
+    Settings::setValue(
+        "view.previewPaneMinimized", mediaClipboardWidget.isPreviewPaneMinimized(), true);
 }
 
 void MainComponent::viewStatusAreaCallback()
