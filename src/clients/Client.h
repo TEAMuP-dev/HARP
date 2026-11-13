@@ -105,14 +105,13 @@ inline OpResult stringJSONToDict(const String& stringJSON, DynamicObject::Ptr& d
         return result;
     }
 
-    if (! data.isObject())
+    // JUCE counts an array as an object too, so only the pointer tells a dictionary apart
+    if (data.getDynamicObject() == nullptr)
     {
         return OpResult::fail(JsonError { JsonError::Type::NotADictionary, stringJSON });
     }
 
     dict = data.getDynamicObject();
-
-    jassert(dict != nullptr);
 
     return OpResult::ok();
 }
@@ -156,14 +155,13 @@ inline OpResult getRequiredDictProperty(DynamicObject::Ptr& parentDict,
 
     const var& value = parentDict->getProperty(key);
 
-    if (! value.isObject())
+    // JUCE counts an array as an object too, so only the pointer tells a dictionary apart
+    if (value.getDynamicObject() == nullptr)
     {
         return OpResult::fail(JsonError { JsonError::Type::NotADictionary, value.toString() });
     }
 
     outDict = value.getDynamicObject();
-
-    jassert(outDict != nullptr);
 
     return OpResult::ok();
 }

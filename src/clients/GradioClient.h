@@ -503,13 +503,14 @@ public:
         {
             var outputVar = dataList.getReference(i);
 
-            if (! outputVar.isObject())
+            DynamicObject::Ptr outputDict = outputVar.getDynamicObject();
+
+            // JUCE counts an array as an object too, so only the pointer tells a dictionary apart
+            if (outputDict == nullptr)
             {
                 return OpResult::fail(
                     JsonError { JsonError::Type::NotADictionary, outputVar.toString() });
             }
-
-            DynamicObject::Ptr outputDict = outputVar.getDynamicObject();
 
             static const Identifier metadataKey { "meta" };
 
@@ -517,7 +518,7 @@ public:
             {
                 var metadata = outputDict->getProperty(metadataKey);
 
-                if (! metadata.isObject())
+                if (metadata.getDynamicObject() == nullptr)
                 {
                     return OpResult::fail(
                         JsonError { JsonError::Type::NotADictionary, metadata.toString() });
