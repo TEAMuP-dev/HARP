@@ -31,12 +31,6 @@ struct AudioLabel : public OutputLabel
     std::optional<float> amplitude;
 };
 
-struct SpectrogramLabel : public OutputLabel
-{
-    // Additional fields
-    std::optional<float> frequency;
-};
-
 struct MidiLabel : public OutputLabel
 {
     // Additional fields

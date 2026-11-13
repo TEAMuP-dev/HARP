@@ -1419,14 +1419,6 @@ private:
             return audioLabel;
         }
 
-        if (labelType == "SpectrogramLabel")
-        {
-            auto spectrogramLabel = std::make_unique<SpectrogramLabel>();
-            spectrogramLabel->frequency = getOptionalNumberProperty(labelObject, "frequency");
-
-            return spectrogramLabel;
-        }
-
         if (labelType == "MidiLabel")
         {
             auto midiLabel = std::make_unique<MidiLabel>();
@@ -1498,10 +1490,7 @@ private:
 
             DBG_AND_LOG("GradioClient::extractLabels: Extracted label of type \""
                         << labelType << "\" with time \"" << String(label->t) << "\" and label \""
-                        << label->label << "\"."
-                        << (labelType == "SpectrogramLabel"
-                                ? " WARNING: HARP does not yet support spectrogram visualization."
-                                : ""));
+                        << label->label << "\".");
 
             labels.push_back(std::move(label));
         }
