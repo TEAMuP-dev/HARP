@@ -30,7 +30,10 @@ void OutputLabelComponent::setDefaultAttributes()
     setColour(Label::textColourId, Colours::white);
     setColour(Label::backgroundColourId, getColor());
 
-    setMinimumHorizontalScale(0.0f);
+    /* A label that is too long for its width is squeezed a little, and then cut short with
+       an ellipsis. Its description, which is the label itself unless another was given, is
+       shown in full while hovering over it. */
+    setMinimumHorizontalScale(0.8f);
 }
 
 void OutputLabelComponent::setColor(Colour clr)
