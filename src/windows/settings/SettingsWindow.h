@@ -15,6 +15,8 @@
 
 #include "../../utils/Interface.h"
 
+namespace harp
+{
 using namespace juce;
 
 class SettingsWindow : public Component
@@ -73,3 +75,5 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsWindow)
 };
+
+} // namespace harp

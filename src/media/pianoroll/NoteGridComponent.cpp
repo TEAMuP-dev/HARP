@@ -1,5 +1,8 @@
 #include "NoteGridComponent.hpp"
 
+namespace harp
+{
+
 NoteGridComponent::NoteGridComponent()
 {
     pixelsPerSecond = 0.0;
@@ -102,3 +105,5 @@ void NoteGridComponent::resetNotes()
 
     repaint();
 }
+
+} // namespace harp

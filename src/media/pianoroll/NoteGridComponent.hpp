@@ -12,6 +12,8 @@
 
 #include "KeyboardComponent.hpp"
 
+namespace harp
+{
 using namespace juce;
 
 struct MidiNote
@@ -62,3 +64,5 @@ private:
     double pixelsPerSecond;
     double lengthInSeconds;
 };
+
+} // namespace harp

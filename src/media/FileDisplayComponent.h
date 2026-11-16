@@ -8,6 +8,9 @@
 
 #include "MediaDisplayComponent.h"
 
+namespace harp
+{
+
 class FileDisplayComponent : public MediaDisplayComponent
 {
 public:
@@ -52,3 +55,5 @@ private:
     static constexpr int fixedHeight = 50;
     static constexpr int labelHeight = 20;
 };
+
+} // namespace harp

@@ -1,5 +1,8 @@
 #include "LoginTab.h"
 
+namespace harp
+{
+
 ProviderPage::ProviderPage(Provider p) : provider(p)
 {
     client = createClient(provider);
@@ -332,3 +335,5 @@ void LoginTab::paintListBoxItem(int rowNumber,
     g.setFont(ModelStyle::font(14.0f, rowIsSelected));
     g.drawText(loginPages.getNameForIndex(rowNumber), 0, 0, width, height, Justification::centred);
 }
+
+} // namespace harp

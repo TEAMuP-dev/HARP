@@ -1,5 +1,8 @@
 #include "AudioDisplayComponent.h"
 
+namespace harp
+{
+
 AudioDisplayComponent::AudioDisplayComponent() : AudioDisplayComponent("Audio Track") {}
 
 AudioDisplayComponent::AudioDisplayComponent(String name, bool req, bool fromDAW, DisplayMode mode)
@@ -93,3 +96,5 @@ void AudioDisplayComponent::postLoadActions(const URL& filePath)
     thumbnailCache.clear();
     thumbnail.setSource(new URLInputSource(filePath));
 }
+
+} // namespace harp

@@ -8,6 +8,9 @@
 
 #include "../Interface.h"
 
+namespace harp
+{
+
 void copyFileToClipboard(const juce::File& file)
 {
     if (! file.existsAsFile())
@@ -22,3 +25,5 @@ void copyFileToClipboard(const juce::File& file)
 
     [pb setString:[fileURL absoluteString] forType:NSPasteboardTypeFileURL];
 }
+
+} // namespace harp

@@ -1,5 +1,8 @@
 #include "MultiButton.h"
 
+namespace harp
+{
+
 MultiButton::MultiButton(const String& buttonName) : TextButton(buttonName)
 {
     // Set default properties
@@ -158,3 +161,5 @@ void MultiButton::mouseExit(const MouseEvent& event)
         onMouseExit();
     }
 }
+
+} // namespace harp

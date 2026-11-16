@@ -10,6 +10,8 @@
 
 #include "../external/magic_enum.hpp"
 
+namespace harp
+{
 using namespace juce;
 
 template <typename EnumType>
@@ -17,3 +19,5 @@ inline String enumToString(EnumType enumValue)
 {
     return std::string(magic_enum::enum_name(enumValue)).c_str();
 }
+
+} // namespace harp

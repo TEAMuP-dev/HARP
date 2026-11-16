@@ -50,6 +50,9 @@
 
 #include "../utils/Logging.h"
 
+namespace harp
+{
+
 class MultiButton : public TextButton
 {
 public:
@@ -157,3 +160,5 @@ struct BorderlessButtonLookAndFeel : public LookAndFeel_V4
 {
     void drawButtonBackground(Graphics&, Button&, const Colour&, bool, bool) override {}
 };
+
+} // namespace harp

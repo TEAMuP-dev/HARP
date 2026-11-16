@@ -23,6 +23,13 @@ following to `.vscode/settings.json`:
 Formatting a file that has never been formatted rewrites its `git blame`. Put such formatting in a
 commit of its own and add the hash of that commit to `.git-blame-ignore-revs`.
 
+### Namespace
+
+All of HARP's code is in the `harp` namespace, which each file opens after its includes and closes
+at its end. `using namespace juce;` goes inside it, never before it, so that a header does not
+bring the names of JUCE into every file that includes it. Vendored code under `src/external/` keeps
+its own namespaces.
+
 ### Owning Collections
 
 Do not store owning raw pointers (`T*`) to heap-allocated objects, such as UI components, in a

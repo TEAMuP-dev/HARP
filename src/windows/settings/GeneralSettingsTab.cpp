@@ -2,6 +2,9 @@
 
 #include "../../utils/ModelCatalog.h"
 
+namespace harp
+{
+
 GeneralSettingsTab::GeneralSettingsTab(std::function<void()> onRestore)
     : onRestoreDefaults(std::move(onRestore))
 {
@@ -138,3 +141,5 @@ void GeneralSettingsTab::handleRestoreDefaults()
         "kept.",
         "Ok");
 }
+
+} // namespace harp

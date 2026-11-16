@@ -12,6 +12,9 @@
 
 #include "../utils/Labels.h"
 
+namespace harp
+{
+
 class AudioThumbnailWrapper : public Component
 {
 public:
@@ -74,3 +77,5 @@ private:
 
     AudioThumbnailWrapper thumbnailComponent { thumbnail, visibleRange };
 };
+
+} // namespace harp

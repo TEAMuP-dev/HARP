@@ -13,6 +13,8 @@
 #include "Enums.h"
 #include "Providers.h"
 
+namespace harp
+{
 using namespace juce;
 
 struct ClientError
@@ -749,3 +751,5 @@ private:
 
     std::optional<Error> error;
 };
+
+} // namespace harp

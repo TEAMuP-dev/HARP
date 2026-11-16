@@ -12,6 +12,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+namespace harp
+{
 using namespace juce;
 
 /* This opens the ModelStyle namespace, which widgets/ModelStyle.h continues with cards,
@@ -98,3 +100,5 @@ private:
     const String title;
 };
 } // namespace ModelStyle
+
+} // namespace harp

@@ -8,6 +8,9 @@
 
 #include <juce_core/juce_core.h>
 
+namespace harp
+{
+
 /* Kept out of Client.h so that an error can name a provider too. Client.h already
    includes Errors.h, so the enum cannot live there without the two including each
    other. */
@@ -30,3 +33,5 @@ inline juce::String getProviderName(Provider provider)
 
     return {};
 }
+
+} // namespace harp

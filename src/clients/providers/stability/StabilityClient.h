@@ -10,6 +10,8 @@
 
 #include "../../Client.h"
 
+namespace harp
+{
 using namespace juce;
 
 struct MultipartRequest
@@ -454,3 +456,5 @@ private:
         return mime;
     }
 };
+
+} // namespace harp

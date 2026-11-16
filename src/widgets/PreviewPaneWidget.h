@@ -18,6 +18,8 @@
 
 #include "ModelStyle.h"
 
+namespace harp
+{
 using namespace juce;
 
 class PreviewPaneWidget : public Component
@@ -358,3 +360,5 @@ private:
 
     bool minimized = false;
 };
+
+} // namespace harp

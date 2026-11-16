@@ -8,6 +8,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+namespace harp
+{
 using namespace juce;
 
 class TabBarLookAndFeel : public LookAndFeel_V4
@@ -94,3 +96,5 @@ private:
     static constexpr int tabTextInset = 10;
     static constexpr int extraComponentMargin = 6;
 };
+
+} // namespace harp

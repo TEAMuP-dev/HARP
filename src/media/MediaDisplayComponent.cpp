@@ -9,6 +9,9 @@
 #include <cmath>
 #include <map>
 
+namespace harp
+{
+
 void OptionalBannerComponent::paint(Graphics& g)
 {
     const float cx = static_cast<float>(getWidth()) / 2.0f;
@@ -1606,3 +1609,5 @@ void MediaDisplayComponent::clearLabels()
 
     resized(); // Remove overhead label panel
 }
+
+} // namespace harp

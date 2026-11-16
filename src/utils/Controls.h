@@ -15,6 +15,8 @@
 
 #include "Logging.h"
 
+namespace harp
+{
 using namespace juce;
 
 /**
@@ -438,3 +440,5 @@ struct MultiSelectComponentInfo : public ModelComponentInfo, public MultiSelectW
 };
 
 using ModelComponentInfoList = std::vector<std::shared_ptr<ModelComponentInfo>>;
+
+} // namespace harp

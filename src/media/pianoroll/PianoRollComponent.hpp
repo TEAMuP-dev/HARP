@@ -12,6 +12,9 @@
 #include "KeyboardComponent.hpp"
 #include "NoteGridComponent.hpp"
 
+namespace harp
+{
+
 /*
  --------------------
  |      |           |
@@ -103,3 +106,5 @@ private:
 
     Slider verticalZoomSlider { Slider::LinearVertical, Slider::NoTextBox };
 };
+
+} // namespace harp

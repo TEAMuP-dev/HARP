@@ -14,6 +14,8 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 
+namespace harp
+{
 using namespace juce;
 
 struct SineWaveSound : public SynthesiserSound
@@ -279,3 +281,5 @@ private:
     MidiMessageSequence sequence;
     Synthesiser synth;
 };
+
+} // namespace harp

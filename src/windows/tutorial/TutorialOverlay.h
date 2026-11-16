@@ -13,6 +13,8 @@
 
 #include "TutorialTargets.h"
 
+namespace harp
+{
 using namespace juce;
 
 /**
@@ -119,3 +121,5 @@ private:
 
     bool isPopupShowing = false;
 };
+
+} // namespace harp

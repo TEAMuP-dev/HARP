@@ -12,6 +12,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+namespace harp
+{
 using namespace juce;
 
 namespace TutorialTargets
@@ -104,3 +106,5 @@ inline Rectangle<int> locate(Component& root, const Target& target)
     return area;
 }
 } // namespace TutorialTargets
+
+} // namespace harp

@@ -8,6 +8,8 @@
 
 #include <juce_core/juce_core.h>
 
+namespace harp
+{
 using namespace juce;
 
 /**
@@ -189,3 +191,5 @@ private:
 
     ApplicationProperties* appProperties;
 };
+
+} // namespace harp

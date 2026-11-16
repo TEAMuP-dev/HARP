@@ -10,6 +10,8 @@
 
 #include "Palette.h"
 
+namespace harp
+{
 using namespace juce;
 
 /**
@@ -55,3 +57,5 @@ protected:
         return ModelStyle::getTextWidth(label.getFont(), label.getText());
     }
 };
+
+} // namespace harp

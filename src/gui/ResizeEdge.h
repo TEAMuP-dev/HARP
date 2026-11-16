@@ -12,6 +12,8 @@
 
 #include "Palette.h"
 
+namespace harp
+{
 using namespace juce;
 
 /**
@@ -90,3 +92,5 @@ public:
 private:
     const Side side;
 };
+
+} // namespace harp

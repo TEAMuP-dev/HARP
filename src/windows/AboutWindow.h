@@ -12,6 +12,8 @@
 
 #include "../utils/Interface.h"
 
+namespace harp
+{
 using namespace juce;
 
 class AboutWindow : public Component
@@ -136,3 +138,5 @@ private:
 
     Label copyrightLabel;
 };
+
+} // namespace harp

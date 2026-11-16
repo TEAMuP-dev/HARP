@@ -10,6 +10,8 @@
 
 #include "../utils/Messages.h"
 
+namespace harp
+{
 using namespace juce;
 
 /**
@@ -216,3 +218,5 @@ private:
     InstructionsBox instructionsBox;
     StatusHistoryBox statusHistoryBox;
 };
+
+} // namespace harp

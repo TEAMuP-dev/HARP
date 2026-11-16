@@ -1,5 +1,8 @@
 #include "PianoRollComponent.hpp"
 
+namespace harp
+{
+
 PianoRollComponent::PianoRollComponent(int kbw, int prs, int sbsz, int sbsp, bool hk, bool hC)
     : keyboardWidth(kbw),
       pianoRollSpacing(prs),
@@ -191,3 +194,5 @@ void PianoRollComponent::autoCenterViewBox(int medianMidi, float stdDevMidi)
     updateVisibleKeyRange(Range<double>((127.0 - medianMidi) - static_cast<double>(halfRange),
                                         (127.0 - medianMidi) + static_cast<double>(halfRange)));
 }
+
+} // namespace harp

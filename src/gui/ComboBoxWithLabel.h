@@ -8,6 +8,8 @@
 
 #include "ControlComponent.h"
 
+namespace harp
+{
 using namespace juce;
 
 class ComboBoxWithLabel : public ControlComponent
@@ -58,3 +60,5 @@ private:
     Label label;
     ComboBox comboBox;
 };
+
+} // namespace harp

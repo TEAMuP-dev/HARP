@@ -18,6 +18,8 @@
 #include "../utils/ModelCatalog.h"
 #include "../utils/ModelTags.h"
 
+namespace harp
+{
 using namespace juce;
 
 namespace ModelStyle
@@ -266,3 +268,5 @@ private:
     SharedResourcePointer<InstructionsMessage> instructionsMessage;
 };
 } // namespace ModelStyle
+
+} // namespace harp

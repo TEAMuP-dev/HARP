@@ -1,5 +1,8 @@
 #include "MainComponent.h"
 
+namespace harp
+{
+
 enum CommandIDs
 {
     // File
@@ -258,3 +261,5 @@ bool MainComponent::perform(const InvocationInfo& info)
 
     return true;
 }
+
+} // namespace harp

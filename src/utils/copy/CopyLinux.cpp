@@ -17,6 +17,9 @@ extern "C"
 
 #include "../Interface.h"
 
+namespace harp
+{
+
 namespace
 {
 /* How long the worker waits between checks for a paste request. It also bounds
@@ -227,3 +230,5 @@ void copyFileToClipboard(const File& file)
 
     clipboardState = std::move(state);
 }
+
+} // namespace harp

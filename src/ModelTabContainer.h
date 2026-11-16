@@ -29,6 +29,8 @@
 
 #include "windows/tutorial/TutorialTargets.h"
 
+namespace harp
+{
 using namespace juce;
 
 class ModelTabsLookAndFeel : public TabBarLookAndFeel
@@ -535,3 +537,5 @@ private:
     // Prefix of the settings keys recording, per provider, that its notice was acknowledged
     static constexpr const char* keyNoticeKeyPrefix = "models.keyNoticeSeen.";
 };
+
+} // namespace harp

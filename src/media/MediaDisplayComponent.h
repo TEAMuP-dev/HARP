@@ -16,6 +16,8 @@
 #include "../utils/Labels.h"
 #include "../utils/Logging.h"
 
+namespace harp
+{
 using namespace juce;
 
 class MediaDisplayComponent;
@@ -399,3 +401,5 @@ private:
     SharedResourcePointer<InstructionsMessage> instructionsMessage;
     SharedResourcePointer<StatusMessage> statusMessage;
 };
+
+} // namespace harp

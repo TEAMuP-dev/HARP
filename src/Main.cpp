@@ -13,6 +13,8 @@
 #include <dlfcn.h>
 #endif
 
+namespace harp
+{
 using namespace juce;
 
 class GuiAppApplication : public JUCEApplication, public FocusChangeListener
@@ -751,5 +753,7 @@ private:
     std::atomic<bool> blockNewModalWindows { false };
 };
 
+} // namespace harp
+
 // Generates main() routine that launches app
-START_JUCE_APPLICATION(GuiAppApplication)
+START_JUCE_APPLICATION(harp::GuiAppApplication)

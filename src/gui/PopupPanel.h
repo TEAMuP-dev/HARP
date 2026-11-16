@@ -18,6 +18,8 @@
 
 #include "../windows/tutorial/TutorialTargets.h"
 
+namespace harp
+{
 using namespace juce;
 
 /**
@@ -206,3 +208,5 @@ private:
 
     bool dismissed = false;
 };
+
+} // namespace harp

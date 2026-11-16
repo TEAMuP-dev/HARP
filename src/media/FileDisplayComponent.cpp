@@ -1,5 +1,8 @@
 #include "FileDisplayComponent.h"
 
+namespace harp
+{
+
 FileDisplayComponent::FileDisplayComponent() : FileDisplayComponent("File Track") {}
 
 FileDisplayComponent::FileDisplayComponent(String name, bool req, bool fromDAW, DisplayMode mode)
@@ -115,3 +118,5 @@ void FileDisplayComponent::postLoadActions(const URL& /*filePath*/)
 {
     // No extra action needed for generic files.
 }
+
+} // namespace harp

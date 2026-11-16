@@ -10,6 +10,8 @@
 
 #include "ControlComponent.h"
 
+namespace harp
+{
 using namespace juce;
 
 /**
@@ -196,3 +198,5 @@ private:
     Label label;
     TextButton selectionButton;
 };
+
+} // namespace harp

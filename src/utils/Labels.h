@@ -8,6 +8,8 @@
 
 #include <juce_core/juce_core.h>
 
+namespace harp
+{
 using namespace juce;
 
 struct OutputLabel
@@ -38,3 +40,5 @@ struct MidiLabel : public OutputLabel
 };
 
 using LabelList = std::vector<std::unique_ptr<OutputLabel>>;
+
+} // namespace harp

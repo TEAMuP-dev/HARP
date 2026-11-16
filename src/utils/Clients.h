@@ -15,6 +15,8 @@
 #include "Errors.h"
 #include "Logging.h"
 
+namespace harp
+{
 using namespace juce;
 
 inline std::unique_ptr<Client> createClient(Provider provider)
@@ -94,3 +96,5 @@ inline std::vector<std::pair<String, DynamicObject::Ptr>> getBuiltInModelCards()
 
     return cards;
 }
+
+} // namespace harp

@@ -8,6 +8,8 @@
 
 #include "ControlComponent.h"
 
+namespace harp
+{
 using namespace juce;
 
 class NumberBoxWithLabel : public ControlComponent
@@ -71,3 +73,5 @@ private:
     Label label;
     Slider numberBox;
 };
+
+} // namespace harp

@@ -9,6 +9,8 @@
 #include "ControlComponent.h"
 #include "MultiButton.h"
 
+namespace harp
+{
 using namespace juce;
 
 class FileChooserWithLabel : public ControlComponent, public FileDragAndDropTarget
@@ -227,3 +229,5 @@ private:
     StringArray fileTypes;
     std::unique_ptr<FileChooser> fileChooser;
 };
+
+} // namespace harp

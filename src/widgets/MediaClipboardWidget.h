@@ -22,6 +22,8 @@
 
 #include "../windows/tutorial/TutorialTargets.h"
 
+namespace harp
+{
 using namespace juce;
 
 class MediaClipboardWidget : public Component, public ChangeListener
@@ -778,3 +780,5 @@ private:
 
     SharedResourcePointer<StatusMessage> statusMessage;
 };
+
+} // namespace harp

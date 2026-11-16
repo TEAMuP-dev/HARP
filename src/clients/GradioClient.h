@@ -10,6 +10,8 @@
 
 #include "Client.h"
 
+namespace harp
+{
 using namespace juce;
 
 class GradioClient : public Client
@@ -1481,3 +1483,5 @@ private:
     CriticalSection zeroGPUCacheLock;
     std::map<String, bool> zeroGPUCache;
 };
+
+} // namespace harp

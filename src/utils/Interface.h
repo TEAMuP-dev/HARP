@@ -8,6 +8,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+namespace harp
+{
 using namespace juce;
 
 inline Colour getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour uiColour,
@@ -22,3 +24,5 @@ inline Colour getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour uiCo
 }
 
 void copyFileToClipboard(const File& file);
+
+} // namespace harp

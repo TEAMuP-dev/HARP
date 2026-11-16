@@ -22,6 +22,8 @@
 #include "TutorialOverlay.h"
 #include "TutorialTargets.h"
 
+namespace harp
+{
 using namespace juce;
 
 /**
@@ -641,3 +643,5 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TutorialWindow)
 };
+
+} // namespace harp

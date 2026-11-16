@@ -23,6 +23,8 @@
 #include "utils/Labels.h"
 #include "utils/Logging.h"
 
+namespace harp
+{
 using namespace juce;
 
 // Shown in the status history as the model moves through loading and processing
@@ -647,3 +649,5 @@ private:
 
     SharedResourcePointer<StatusMessage> statusMessage;
 };
+
+} // namespace harp

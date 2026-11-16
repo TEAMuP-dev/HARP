@@ -18,6 +18,8 @@
 #include "../utils/Providers.h"
 #include "../utils/Settings.h"
 
+namespace harp
+{
 using namespace juce;
 
 /* The API key saved for each provider. Read by worker threads making requests while the
@@ -658,3 +660,5 @@ private:
        cannot be aborted. */
     RequestRegistry* requestRegistry = nullptr;
 };
+
+} // namespace harp

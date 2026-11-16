@@ -17,6 +17,8 @@
 #include "../../utils/Logging.h"
 #include "../../utils/Settings.h"
 
+namespace harp
+{
 using namespace juce;
 
 class ProviderPage : public Component
@@ -139,3 +141,5 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LoginTab)
 };
+
+} // namespace harp

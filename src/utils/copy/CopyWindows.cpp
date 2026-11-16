@@ -9,6 +9,9 @@
 
 #include "../Interface.h"
 
+namespace harp
+{
+
 void copyFileToClipboard(const juce::File& file)
 {
     if (! file.existsAsFile())
@@ -37,3 +40,5 @@ void copyFileToClipboard(const juce::File& file)
     SetClipboardData(CF_HDROP, hMem);
     CloseClipboard();
 }
+
+} // namespace harp

@@ -8,6 +8,8 @@
 
 #include "ControlComponent.h"
 
+namespace harp
+{
 using namespace juce;
 
 class ToggleWithLabel : public ControlComponent
@@ -50,3 +52,5 @@ private:
 
     ToggleButton toggleButton;
 };
+
+} // namespace harp

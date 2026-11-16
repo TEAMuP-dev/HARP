@@ -8,6 +8,8 @@
 
 #include "ControlComponent.h"
 
+namespace harp
+{
 using namespace juce;
 
 class TextBoxWithLabel : public ControlComponent
@@ -69,3 +71,5 @@ private:
     Label label;
     TextEditor textBox;
 };
+
+} // namespace harp

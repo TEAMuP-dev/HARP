@@ -24,6 +24,8 @@
 #include "../utils/Controls.h"
 #include "../utils/Logging.h"
 
+namespace harp
+{
 using namespace juce;
 
 class ControlAreaWidget : public Component
@@ -391,3 +393,5 @@ private:
 
     SharedResourcePointer<InstructionsMessage> instructionsMessage;
 };
+
+} // namespace harp

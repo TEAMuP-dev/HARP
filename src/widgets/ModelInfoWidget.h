@@ -18,6 +18,8 @@
 
 #include "../utils/Logging.h"
 
+namespace harp
+{
 using namespace juce;
 
 class ModelAuthorLabel : public Component
@@ -242,3 +244,5 @@ private:
 
     std::vector<ModelStyle::Badge> badges;
 };
+
+} // namespace harp

@@ -8,6 +8,8 @@
 
 #include <juce_core/juce_core.h>
 
+namespace harp
+{
 using namespace juce;
 
 struct SharedMessage : public ChangeBroadcaster
@@ -94,3 +96,5 @@ private:
 struct InstructionsMessage : SharedMessage
 {
 };
+
+} // namespace harp

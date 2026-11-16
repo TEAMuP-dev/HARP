@@ -32,6 +32,8 @@
 #include "ModelTags.h"
 #include "Settings.h"
 
+namespace harp
+{
 using namespace juce;
 
 struct CatalogEntry
@@ -731,3 +733,5 @@ private:
 
     JUCE_DECLARE_WEAK_REFERENCEABLE(ModelCatalog)
 };
+
+} // namespace harp

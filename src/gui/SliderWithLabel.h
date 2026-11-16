@@ -8,6 +8,8 @@
 
 #include "ControlComponent.h"
 
+namespace harp
+{
 using namespace juce;
 
 class SliderWithLabel : public ControlComponent
@@ -55,3 +57,5 @@ private:
     Label label;
     Slider slider;
 };
+
+} // namespace harp

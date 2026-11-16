@@ -23,6 +23,8 @@
 
 #include "windows/tutorial/TutorialTargets.h"
 
+namespace harp
+{
 using namespace juce;
 
 /**
@@ -923,3 +925,5 @@ private:
     std::unique_ptr<BottomButtonAlertWindow> errorPopupWindow;
     std::function<void()> errorPopupOnExit;
 };
+
+} // namespace harp

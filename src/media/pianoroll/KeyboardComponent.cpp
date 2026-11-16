@@ -1,5 +1,8 @@
 #include "KeyboardComponent.hpp"
 
+namespace harp
+{
+
 const char* KeyboardComponent::pitchNames[] = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B",
 };
@@ -60,3 +63,5 @@ void KeyboardComponent::paint(Graphics& g)
 }
 
 float KeyboardComponent::getKeyHeight() { return static_cast<float>(getHeight()) / 128.0f; }
+
+} // namespace harp

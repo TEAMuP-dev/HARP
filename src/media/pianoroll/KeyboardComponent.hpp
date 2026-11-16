@@ -8,6 +8,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+namespace harp
+{
 using namespace juce;
 
 class KeyboardComponent : public Component
@@ -26,3 +28,5 @@ public:
 
     float getKeyHeight();
 };
+
+} // namespace harp

@@ -11,6 +11,8 @@
 
 #include "../utils/Messages.h"
 
+namespace harp
+{
 using namespace juce;
 
 /**
@@ -117,3 +119,5 @@ private:
 
     bool pointingUp = false;
 };
+
+} // namespace harp

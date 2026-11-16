@@ -22,6 +22,8 @@
 
 #include <juce_core/juce_core.h>
 
+namespace harp
+{
 using namespace juce;
 
 namespace Taxonomy
@@ -375,3 +377,5 @@ private:
         }
     }
 };
+
+} // namespace harp

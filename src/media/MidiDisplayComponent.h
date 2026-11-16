@@ -12,6 +12,9 @@
 
 #include "../utils/Labels.h"
 
+namespace harp
+{
+
 class MidiDisplayComponent : public MediaDisplayComponent
 {
 public:
@@ -82,3 +85,5 @@ private:
         70, 3, scrollBarSize, controlSpacing, isThumbnailTrack(), isThumbnailTrack()
     };
 };
+
+} // namespace harp

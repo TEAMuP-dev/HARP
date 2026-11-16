@@ -19,6 +19,8 @@
 #include "../utils/Interface.h"
 #include "../utils/Logging.h"
 
+namespace harp
+{
 using namespace juce;
 
 class DragOverlayComponent : public Component
@@ -810,3 +812,5 @@ private:
 
     std::vector<std::unique_ptr<MediaDisplayComponent>> mediaDisplays;
 };
+
+} // namespace harp

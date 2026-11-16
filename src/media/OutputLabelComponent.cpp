@@ -1,5 +1,8 @@
 #include "OutputLabelComponent.h"
 
+namespace harp
+{
+
 OutputLabelComponent::OutputLabelComponent(double t,
                                            String lbl,
                                            double dur,
@@ -158,3 +161,5 @@ float LabelOverlayComponent::pitchToRelativeY(float pitch)
 {
     return jmin(1.0f, jmax(0.0f, 1 - pitch / 128));
 }
+
+} // namespace harp

@@ -17,6 +17,8 @@
 #include "../utils/Clients.h"
 #include "../utils/Logging.h"
 
+namespace harp
+{
 using namespace juce;
 
 class CustomPathComponent : public Component
@@ -171,3 +173,5 @@ private:
 
     std::function<void(String)> onLoadCallback;
 };
+
+} // namespace harp

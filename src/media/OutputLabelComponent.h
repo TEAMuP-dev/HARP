@@ -13,6 +13,8 @@
 
 #include "../utils/Logging.h"
 
+namespace harp
+{
 using namespace juce;
 
 class TimeMarkerComponent : public Component
@@ -120,3 +122,5 @@ public:
 private:
     float relativeY = 0.0f;
 };
+
+} // namespace harp

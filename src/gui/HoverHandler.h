@@ -10,6 +10,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+namespace harp
+{
 using namespace juce;
 
 class HoverHandler : public MouseListener
@@ -52,3 +54,5 @@ private:
 
     Component& component;
 };
+
+} // namespace harp

@@ -26,6 +26,8 @@
 
 #include "windows/CustomPathWindow.h"
 
+namespace harp
+{
 using namespace juce;
 
 /**
@@ -855,3 +857,5 @@ private:
     SharedResourcePointer<ModelCatalog> catalog;
     SharedResourcePointer<InstructionsMessage> instructionsMessage;
 };
+
+} // namespace harp

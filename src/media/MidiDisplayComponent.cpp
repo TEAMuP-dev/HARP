@@ -1,5 +1,8 @@
 #include "MidiDisplayComponent.h"
 
+namespace harp
+{
+
 MidiDisplayComponent::MidiDisplayComponent() : MediaDisplayComponent("Midi Track") {}
 
 MidiDisplayComponent::MidiDisplayComponent(String name, bool req, bool fromDAW, DisplayMode mode)
@@ -258,3 +261,5 @@ void MidiDisplayComponent::startPlaying()
     synthAudioSource.resetNotes();
     transportSource.start();
 }
+
+} // namespace harp

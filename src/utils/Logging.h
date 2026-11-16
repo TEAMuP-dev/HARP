@@ -11,6 +11,8 @@
 
 #include "Errors.h"
 
+namespace harp
+{
 using namespace juce;
 
 class HARPLogger : private DeletedAtShutdown
@@ -125,6 +127,8 @@ inline void debugAndLog(const String& message) { HARPLogger::getInstance()->debu
 /**
  * Macro to match the behavior of DBG().
  */
-#define DBG_AND_LOG(textToWrite)                                                   \
-    JUCE_BLOCK_WITH_FORCED_SEMICOLON(String tempDbgBuf; tempDbgBuf << textToWrite; \
-                                     debugAndLog(tempDbgBuf);)
+#define DBG_AND_LOG(textToWrite)                                                         \
+    JUCE_BLOCK_WITH_FORCED_SEMICOLON(juce::String tempDbgBuf; tempDbgBuf << textToWrite; \
+                                     harp::debugAndLog(tempDbgBuf);)
+
+} // namespace harp

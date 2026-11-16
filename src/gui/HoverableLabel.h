@@ -10,6 +10,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 
+namespace harp
+{
 using namespace juce;
 
 class HoverableLabel : public Label
@@ -116,3 +118,5 @@ private:
     Colour originalTextColor;
     Colour hoverColor = Colours::blue;
 };
+
+} // namespace harp

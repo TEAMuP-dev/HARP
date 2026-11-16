@@ -1,5 +1,8 @@
 #include "MainComponent.h"
 
+namespace harp
+{
+
 JUCE_IMPLEMENT_SINGLETON(HARPLogger)
 
 MainComponent::MainComponent()
@@ -462,3 +465,5 @@ void MainComponent::changeListenerCallback(ChangeBroadcaster* source)
         updateWindowConstraints();
     }
 }
+
+} // namespace harp
