@@ -13,11 +13,11 @@ from pathlib import Path
 
 from gradio_client import handle_file
 
-from assets import Assets, input_kind
-from audio import read_audio_props
-from expectations import FILE_TYPES, check_expectations, resolve_expect_targets
-from midi import read_midi_props
-from validators import VALIDATORS, ValidatorNotApplicable
+from endpoint.expectations import FILE_TYPES, check_expectations, resolve_expect_targets
+from endpoint.validators import VALIDATORS, ValidatorNotApplicable
+from media.assets import Assets, input_kind
+from media.audio import read_audio_props
+from media.midi import read_midi_props
 
 
 __all__ = [
@@ -382,7 +382,7 @@ def inspect_outputs(result, controls: dict, case: dict) -> None:
             raise ValueError(
                 f"unknown validator '{name}' (available: "
                 f"{sorted(VALIDATORS)}). Register it in "
-                f"validators.py"
+                f"endpoint/validators.py"
             )
         try:
             VALIDATORS[name](out_map, controls, params or {})

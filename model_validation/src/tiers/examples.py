@@ -17,8 +17,8 @@ from pathlib import Path
 
 from gradio_client import Client
 
-from assets import Assets
-from harness import close_client, run_endpoint_tests
+from endpoint.harness import close_client, run_endpoint_tests
+from media.assets import Assets
 from results import ModelResult
 from utils import describe_exception
 

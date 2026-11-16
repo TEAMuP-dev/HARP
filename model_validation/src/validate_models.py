@@ -5,20 +5,21 @@ HARP model validation - command-line entry point.
 Parses the options, runs one of the three tiers, and writes the reports:
 
 1. Spaces (default): every Space under an organization, validated concurrently
-   by spaces.py. Requires a Hugging Face token, read only from the HF_TOKEN
-   environment variable so it never appears in argv or in the repository.
+   by tiers/spaces.py. Requires a Hugging Face token, read only from the
+   HF_TOKEN environment variable so it never appears in argv or in the
+   repository.
 
 2. Examples (--local-examples): the pyharp example apps, launched locally and
-   validated one at a time by examples.py. Needs no token, and exercises
+   validated one at a time by tiers/examples.py. Needs no token, and exercises
    pyharp itself with no Hugging Face infrastructure in the loop.
 
 3. Lint (--lint): every Space's files, read from the Hub and checked against
-   docs/DEPLOYMENT.md by lint.py, without running anything. Needs the token to
-   read them, and uv to resolve their requirements.
+   docs/DEPLOYMENT.md by tiers/lint.py, without running anything. Needs the
+   token to read them, and uv to resolve their requirements.
 
-The first two run the same checks, from harness.py. Which models to validate
-and what to assert about their outputs is configured in config.yml. README.md
-is the guide to writing that.
+The first two run the same checks, from endpoint/harness.py. Which models to
+validate and what to assert about their outputs is configured in config.yml.
+README.md is the guide to writing that.
 
 Usage:
     HF_TOKEN=... python model_validation/src/validate_models.py
@@ -41,12 +42,12 @@ import threading
 import time
 from pathlib import Path
 
-from assets import Assets, check_synthesized_inputs
-from examples import test_local_example
-from lint import ERROR, check_lint_exceptions, find_uv, lint_space
+from media.assets import Assets, check_synthesized_inputs
 from quota import ZeroGPUTracker
 from results import FAIL, status_emoji, write_reports
-from spaces import test_space
+from tiers.examples import test_local_example
+from tiers.lint import ERROR, check_lint_exceptions, find_uv, lint_space
+from tiers.spaces import test_space
 from utils import (
     Exclusions,
     check_config_keys,

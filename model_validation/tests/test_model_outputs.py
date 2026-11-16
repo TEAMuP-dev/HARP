@@ -19,11 +19,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import soundfile
 
-from assets import check_synthesized_inputs
-from expectations import check_expectations, resolve_expect_targets
-from harness import merge_common_cases
+from endpoint.expectations import check_expectations, resolve_expect_targets
+from endpoint.harness import merge_common_cases
+from endpoint.validators import VALIDATORS, ValidatorNotApplicable
+from media.assets import check_synthesized_inputs
 from utils import check_config_keys, load_config
-from validators import VALIDATORS, ValidatorNotApplicable
 
 
 class ValidatorTest(unittest.TestCase):
@@ -319,10 +319,6 @@ class MergeCommonCasesTest(unittest.TestCase):
         self.assertEqual(cases[0]["files"], {"In": "a.wav"})
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class ReportTest(unittest.TestCase):
     """What the human-readable report shows for a failure."""
 
@@ -343,8 +339,8 @@ class ReportTest(unittest.TestCase):
         self.assertIn("ValueError: the checkpoint is corrupt", report)
 
     def test_a_lint_run_lists_its_findings(self):
-        from lint_base import Finding
         from results import ModelResult, render_markdown
+        from rules.base import Finding
 
         result = ModelResult(
             target="teamup-tech/a",
@@ -398,7 +394,7 @@ class LabelsWithinTracksTest(unittest.TestCase):
     """Each label is held to the track over which HARP draws it."""
 
     def setUp(self):
-        from assets import write_midi
+        from media.assets import write_midi
 
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -502,7 +498,7 @@ class ClippingTest(unittest.TestCase):
         self.assertIn("clips", str(caught.exception))
 
     def test_float_samples_over_full_scale_count(self):
-        from audio import read_audio_props
+        from media.audio import read_audio_props
 
         path = self.write("overs.wav", 1.5 * self.sine, subtype="FLOAT")
         self.assertGreater(read_audio_props("Mix", path)["clipping"], 0.3)
@@ -539,3 +535,7 @@ class ExpectTargetsTest(unittest.TestCase):
         targets = self.resolve({"*": {"min_rms_db": -80, "min_notes": 1}})
         self.assertEqual(targets["Score"], {"min_notes": 1})
         self.assertEqual(targets["Vocals"], {"min_rms_db": -80})
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -11,8 +11,8 @@ asserts.
 
 import os
 
-from audio import read_audio_props
-from midi import read_midi_props
+from media.audio import read_audio_props
+from media.midi import read_midi_props
 
 
 __all__ = ["EXPECT_RULES", "FILE_TYPES", "resolve_expect_targets", "check_expectations"]

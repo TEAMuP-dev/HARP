@@ -16,8 +16,13 @@ import traceback
 import httpx
 from gradio_client import Client
 
-from assets import Assets
-from harness import CONNECT_RETRY_INTERVAL, close_client, is_quota_exhausted, run_endpoint_tests
+from endpoint.harness import (
+    CONNECT_RETRY_INTERVAL,
+    close_client,
+    is_quota_exhausted,
+    run_endpoint_tests,
+)
+from media.assets import Assets
 from quota import spends_zerogpu
 from results import FAIL, SKIP, ModelResult
 from utils import describe_exception, run_with_timeout, scrub
