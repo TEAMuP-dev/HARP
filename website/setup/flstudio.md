@@ -23,8 +23,9 @@ The FL Studio manual describes the setting under
 
 ## Open Audio in HARP
 
-HARP overwrites the file of the sample, wherever it is, including a sample from a pack. Copy the file
-first if you want to keep the original.
+HARP overwrites the file of the sample, wherever it is, including a sample from a pack. The backup
+it keeps is temporary (see [Protecting the Original](/setup/#protecting-the-original)), so copy the
+file first if you want to keep the original.
 
 1. In the Channel settings of a sampler channel, choose `Edit...` (`E`) from the `Sample` menu,
    which opens the sample in HARP.

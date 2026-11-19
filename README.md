@@ -92,9 +92,11 @@ _Send-to-DAW_ icon of the media clipboard or write it to disk with the _Save_ ic
 ## Warning
 
 <!-- #region warning -->
-**HARP is a _destructive_ file editor.** When running it standalone, use _Save As_ to avoid
-overwriting the input. _Send-to-DAW_ overwrites the file from which the audio came. Working on a
-duplicate, a bounce, or an alternate take leaves the original intact.
+**Sending a result back to a DAW overwrites the file behind the clip.** HARP first copies that file
+to a `HARP Backups` folder in the system temporary folder, and names the copy in the status area.
+The system clears temporary files from time to time, so move a backup that you want to keep.
+Working on a duplicate, a bounce, or an alternate take leaves the original intact. Apart from
+that, HARP writes only where you tell it to, since saving a track asks for a location.
 
 HARP processes the whole file a DAW passes it, so editing part of a clip means splitting it first,
 then copying the excerpt into a file of its own, _e.g._, by bouncing it in place.
@@ -151,7 +153,8 @@ its own when a file is added with `File > Open`.
 - Drag the left edge of the clipboard to change its width. HARP keeps the width of the clipboard and
   the height and state of the preview pane for the next session.
 - When a DAW opened HARP with a file, the send icon overwrites that file with the selected track,
-  which brings the result back into the DAW project.
+  which brings the result back into the DAW project. HARP keeps a backup of the file it overwrites,
+  and names it in the status area.
 <!-- #endregion media-clipboard -->
 
 ![Dragging a track from the media clipboard onto an input track of a model](website/public/images/media-clipboard.png)

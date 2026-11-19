@@ -13,7 +13,7 @@ Requests and contributions are welcome as [issues](https://github.com/TEAMuP-dev
   HARP cannot process live input, follow the transport of a DAW, or respond to automation. It is an
   external editor rather than a plugin, and offers no VST3, AU, or AAX version.
 - **Results replace the original.** Sending a result back to a DAW overwrites the file behind the
-  clip, with no undo in HARP (see
+  clip. HARP has no undo, but keeps a temporary backup of the file it overwrites (see
   [Protecting the Original](/setup/#protecting-the-original)).
 - **An app runs one job at a time.** Requests from several users to the same app are queued.
 - **Jobs have time limits.** PyHARP stops a job after 15 minutes by default, and a ZeroGPU request
