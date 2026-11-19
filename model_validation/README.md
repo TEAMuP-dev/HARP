@@ -73,9 +73,8 @@ to recover them.
 
 A lint of named Spaces (`--lint --spaces ...`) is the one run on Hugging Face
 that goes ahead without a token, since it only reads and anyone can read a
-public Space. It then reports a private Space as one it could not read. A lint
-of the whole organization still needs the token, so that a missing one stops
-the run instead of leaving the private Spaces out.
+public Space. A lint of the whole organization still needs the token, so that a
+missing one stops the run instead of leaving the private Spaces out.
 
 ## Running Locally
 
