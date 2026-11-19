@@ -80,7 +80,7 @@ week, or until the app stops. Open the local URL in a browser to try the app on 
 
 ## Open It in HARP
 
-1. On the `Home` tab of HARP, click `Custom Path...`.
+1. On HARP's `Home` tab, click `Custom Path...`.
 2. Enter the local URL, _e.g._, `http://localhost:7860`, and click `Load`. The model opens in a tab
    of its own, and keeps a card on the Home tab.
 3. Drag a MIDI file onto the `Input MIDI` track, and select `Process`. The rendered audio appears
@@ -89,7 +89,7 @@ week, or until the app stops. Open the local URL in a browser to try the app on 
 ![The MIDI synthesizer in HARP, after rendering a MIDI file](/images/example-in-harp.png)
 
 HARP reads the interface of an app when it loads the model, so after changing a component, close
-the tab of the model and open it again from its card. Stop the app with `Ctrl+C`.
+the model tab and open it again from its card. Stop the app with `Ctrl+C`.
 
 ## How It Works
 

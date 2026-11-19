@@ -1,10 +1,10 @@
 ---
-description: The limits of HARP in processing, networking, media types, DAW support, and versions.
+description: HARP's limits in processing, networking, media types, DAW support, and versions.
 ---
 
 # Limitations
 
-Some limits of HARP follow from processing remotely, and others are features we have yet to build.
+Some of HARP's limits follow from processing remotely, and others are features we have yet to build.
 Requests and contributions are welcome as [issues](https://github.com/TEAMuP-dev/HARP/issues).
 
 ## Processing

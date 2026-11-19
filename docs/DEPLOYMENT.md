@@ -784,8 +784,8 @@ account at all, and HARP opens it by its URL.
 
 On a paid plan, the `cpu-basic` hardware, with 2 vCPUs and 16 GB of memory, runs at no cost, and
 sleeps after 48 hours without a request. Upgraded hardware is billed by the minute while the Space
-runs. A ZeroGPU allowance resets 24 hours after its first use. The
-[pricing page](https://huggingface.co/pricing) of Hugging Face has the current terms.
+runs. A ZeroGPU allowance resets 24 hours after its first use. Hugging Face's
+[pricing page](https://huggingface.co/pricing) has the current terms.
 <!-- #endregion hugging-face-plans -->
 
 Decide by measurement. Time a warm request with 10 seconds of input on `cpu-basic`, which the

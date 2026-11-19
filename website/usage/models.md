@@ -69,7 +69,7 @@ started, which takes a minute or two, HARP reports that it is still starting and
 `Try again`. Open the model again once that time has passed.
 
 When a request fails, HARP reports the cause in a popup, with the actions that apply: adding an API
-key, opening the page of the model to check its status, opening the log, or reporting the problem
+key, opening the model page to check its status, opening the log, or reporting the problem
 through a prefilled GitHub issue. A quota error clears once the allowance resets, or immediately
 with a key.
 

@@ -34,7 +34,7 @@ import requests
 
 API_URL = "https://api.example.com/v1/process"
 
-# A secret of the Space, which reaches the app as an environment variable. Never commit a key.
+# A Space secret, which reaches the app as an environment variable. Never commit a key.
 API_KEY = os.environ["EXAMPLE_API_KEY"]
 
 

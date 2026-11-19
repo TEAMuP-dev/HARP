@@ -57,13 +57,13 @@ account can host it too.
    git push
    ```
 
-5. **Watch it build.** The page of the Space shows its status, and its `Logs` panel has two tabs.
+5. **Watch it build.** The Space page shows its status, and its `Logs` panel has two tabs.
    The `Build` tab shows pip installing the requirements, which takes five to ten minutes. The
    `Container` tab then shows `app.py` starting and downloading the weights, and ends with
    `Running on local URL`. An error at startup appears there, as does the traceback when HARP
    reports that a job failed. Once the status reads `Running`, try the app on the page.
 
-   ![The page of a Space, with its logs open](/images/space-logs.png)
+   ![A Space page, with its logs open](/images/space-logs.png)
 
 6. **Open it in HARP.** On the `Home` tab, click `Custom Path...`, enter `<USERNAME>/demucs`, and
    click `Load`. The model keeps a card on the `Home` tab until the X button on that card removes
@@ -177,7 +177,7 @@ that needs a GPU there has to pay for one.
   describes. `hf upload` from the `huggingface_hub` package handles them without Git. Weights can
   also stay in a repository of their own on the Hub, from which the app downloads them, as
   Example 2 does.
-- **Keys and tokens** belong in the secrets of the Space, under `Settings`, which reach the app as
+- **Keys and tokens** belong in the Space secrets, under `Settings`, which reach the app as
   environment variables. Never commit them.
 - **A private Space** opens in HARP only with a Hugging Face key from an account that can see it.
 

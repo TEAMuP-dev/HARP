@@ -1,5 +1,5 @@
 ---
-description: Set HARP as the sample editor of Ableton Live, open a clip in a model, and send the result back to the Set.
+description: Set HARP as Ableton Live's sample editor, open a clip in a model, and send the result back to the Set.
 ---
 
 # Ableton Live

@@ -75,7 +75,7 @@ pnpm run docs:dev        # Serves the site at http://localhost:5173, reloading o
 ### Screenshots
 
 - **Images** go in `website/public/images/`, served at `/images/<name>.png`. The README links the
-  ones it shares with the site as `website/public/images/<name>.png`, and the README of PyHARP as
+  ones it shares with the site as `website/public/images/<name>.png`, and PyHARP's README as
   `https://harp.tools/images/<name>.png`, so that one file serves all three.
 - **Screenshots** are macOS window captures at Retina scale, with the HARP window about 1000 by
   780 points, published as captured, shadow included. Every image is shown at the width of the
@@ -132,8 +132,8 @@ alone, so deploy previews and branch deploys are unaffected.
 
 ## Search Engines
 
-The build gives a crawler what it needs to index the site, and nothing in the repository or in the
-responses of Netlify blocks one:
+The build gives a crawler what it needs to index the site, and nothing in the repository or in
+Netlify's responses blocks one:
 
 - **`sitemap.xml`** lists every page. VitePress writes it from the `hostname` in
   `website/.vitepress/config.mjs`, and `website/public/robots.txt` names it.
@@ -219,7 +219,7 @@ no authorization code and costs nothing:
 4. The new maintainer replaces the registrant contact with their own, and checks auto-renew and the
    card on the account.
 
-The site keeps running throughout, since the nameservers stay those of Netlify. Moving the domain to
+The site keeps running throughout, since the nameservers stay with Netlify. Moving the domain to
 another registrar instead takes an authorization code from Porkbun, a few days, and a year of
 registration at the price of the new registrar.
 
@@ -236,8 +236,8 @@ Should the site move to another domain:
    Netlify as above. Wait until it loads over HTTPS.
 2. Replace the old address wherever the repository links it: `src/windows/AboutWindow.h` and
    `src/windows/tutorial/TutorialWindow.h`, which are compiled into the app, the root `README.md`,
-   `docs/`, the `hostname` in `website/.vitepress/config.mjs`, `website/public/robots.txt`, and the
-   README of PyHARP, whose images load from the site. `grep -rn "harp.tools" .` finds them.
+   `docs/`, the `hostname` in `website/.vitepress/config.mjs`, `website/public/robots.txt`, and
+   PyHARP's README, whose images load from the site. `grep -rn "harp.tools" .` finds them.
 3. Add a rule like the first one in `website/public/_redirects`, from the old address to the new, at
    the top, and keep every existing rule. The `!` after its status makes it apply even where a file
    exists at the path, which on this site is every page.
