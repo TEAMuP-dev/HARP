@@ -84,7 +84,8 @@ week, or until the app stops. Open the local URL in a browser to try the app on 
 2. Enter the local URL, _e.g._, `http://localhost:7860`, and click `Load`. The model opens in a tab
    of its own, and keeps a card on the Home tab.
 3. Drag a MIDI file onto the `Input MIDI` track, and select `Process`. The rendered audio appears
-   in the `Synthesized Audio` track.
+   in the `Synthesized Audio` track. The `Soundfont` file picker is optional, and takes a `.sf2` or
+   `.sf3` file to render with in place of MuseScore General.
 
 ![The MIDI synthesizer in HARP, after rendering a MIDI file](/images/example-in-harp.png)
 

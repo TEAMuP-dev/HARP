@@ -117,8 +117,9 @@ HARP's Home tab lists every model we host, by category. Notable models include t
 **Synthesis**
 
 - [MIDI Synthesizer](https://huggingface.co/spaces/teamup-tech/MIDI-Synthesizer) renders MIDI with
-  a General MIDI soundfont, and [DDSP-Piano](https://huggingface.co/spaces/teamup-tech/DDSP-Piano)
-  and [DDSP-Guitar](https://huggingface.co/spaces/teamup-tech/DDSP-Guitar) render it with expressive
+  a General MIDI soundfont or one of your own, and
+  [DDSP-Piano](https://huggingface.co/spaces/teamup-tech/DDSP-Piano) and
+  [DDSP-Guitar](https://huggingface.co/spaces/teamup-tech/DDSP-Guitar) render it with expressive
   instrument models.
 - [Kokoro](https://huggingface.co/spaces/teamup-tech/Kokoro) synthesizes speech from text, and
   [OmniVoice](https://huggingface.co/spaces/teamup-tech/OmniVoice) synthesizes it in the voice of a
