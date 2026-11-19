@@ -4,10 +4,22 @@
 
 ### Formatting
 
-`.clang-format` holds the formatting rules of the project, which follow JUCE. Format a file with
-`clang-format` before committing it. In Visual Studio Code, install the C/C++ extension from
-Microsoft, and on macOS `clang-format` itself with `brew install clang-format`, then add the
-following to `.vscode/settings.json`:
+C++ is formatted with `clang-format`, by the rules in `.clang-format`, which follow JUCE. Python is
+formatted and linted with [ruff](https://docs.astral.sh/ruff/), by the rules in `ruff.toml`, which
+are those of Black at a line length of 100. PyHARP has a `ruff.toml` of its own.
+
+Releases of either tool can format the same code differently, so `.pre-commit-config.yaml` pins the
+versions, and the `Lint` workflow fails a push whose files those versions would change. Run the same
+checks before committing with [pre-commit](https://pre-commit.com):
+
+```bash
+pipx run pre-commit run --all-files   # once, over every file
+pipx run pre-commit install           # from then on, over the files of each commit
+```
+
+To format from an editor instead, install the pinned versions (`pip install clang-format==22.1.8
+ruff==0.17.4`). In Visual Studio Code, the C/C++ extension from Microsoft formats with the
+`clang-format` it finds once the following is in `.vscode/settings.json`:
 
 ```json
 {
@@ -20,8 +32,8 @@ following to `.vscode/settings.json`:
 `Ctrl+Shift+I`, or `Format Document` in the context menu of a file, then formats it, and
 `"editor.formatOnSave": true` formats every file on save.
 
-Formatting a file that has never been formatted rewrites its `git blame`. Put such formatting in a
-commit of its own and add the hash of that commit to `.git-blame-ignore-revs`.
+A commit that only reformats rewrites the `git blame` of every line it touches. Keep such a commit
+free of other changes and add its hash to `.git-blame-ignore-revs`.
 
 ### Owning Collections
 

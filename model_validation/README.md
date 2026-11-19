@@ -975,9 +975,11 @@ second entry.
 
 ## CI Behavior
 
-- **Schedule:** daily at 04:45 UTC. It can also be run manually from the
-  Actions tab, with options to validate specific spaces, skip inference, or
-  disable the default restart of crashed spaces.
+- **Schedule:** daily at 04:45 UTC, started by
+  [model_validation_schedule.yml](../.github/workflows/model_validation_schedule.yml).
+  The workflow can also be run manually from the Actions tab, with options to
+  validate specific spaces, skip inference, or disable the default restart of
+  crashed spaces.
 - **Lint:** a third job lints every space, or the ones named, alongside the
   other two. It takes a few minutes and spends no allowance, and its report is
   a separate artifact.
@@ -996,13 +998,13 @@ second entry.
 - **Harness tests:** the examples job first runs the unit tests under
   `tests/`, which also check config.yml, so a configuration mistake turns the
   run red before any model runs.
-- **Failure signal:** model failures keep the run green, because deployments
-  are not yet stable enough for daily failure emails to be useful. They show
-  up as warning annotations and in the run summary and report instead. No
-  issues are opened and no emails are sent. Only infrastructure errors, such
-  as a bad token or a discovery failure, turn the run red, since those mean
-  validation itself has stopped working.
-- **Opting back into notifications later:** remove the exit-code handling in
-  the two `Validate` steps and the `Lint spaces` step of the workflow so that
-  exit code 1 propagates. Failed runs then turn red and GitHub emails
-  maintainers.
+- **Failure signal:** a failing model turns its job, and with it the run, red.
+  So does an infrastructure error, such as a bad token or a discovery failure,
+  which means validation itself has stopped working. The run summary and the
+  report say which it was. No issues are opened.
+- **Notifications:** GitHub emails the failures of a scheduled workflow to
+  whoever last edited its schedule, on every run until the failure is fixed.
+  The daily run is therefore started by a second workflow, which holds the
+  schedule and does nothing else. A run started that way belongs to the GitHub
+  Actions bot, so a failure shows in the Actions tab and emails no one. A run
+  started by hand notifies whoever started it.
