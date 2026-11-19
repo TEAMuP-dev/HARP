@@ -10,7 +10,8 @@ The
 [validation harness](https://github.com/TEAMuP-dev/HARP/blob/main/model_validation/README.md)
 checks every Space against these guidelines daily. Its lint tier reads each Space's files for the
 rules stated here, and its spaces tier runs each Space to check what it returns and what it
-refuses.
+refuses. It checks a deployment of your own as well, as
+[Checking a Deployment](#checking-a-deployment) describes.
 
 Hugging Face can change its platform with little notice, and
 [Hugging Face Changes](https://github.com/TEAMuP-dev/HARP/blob/main/docs/HUGGINGFACE.md) logs
@@ -31,6 +32,7 @@ several changes that broke our Spaces.
 - [Dependency Conflicts](#dependency-conflicts)
 - [Calling Another Space](#calling-another-space)
 - [Lightweight Spaces](#lightweight-spaces)
+- [Checking a Deployment](#checking-a-deployment)
 
 ## Licensing
 
@@ -1035,3 +1037,44 @@ None of it belongs in a Space.
 - Put `apt-get` packages in `packages.txt` rather than shelling out at startup.
 
 A Space that starts quickly also recovers quickly after sleeping.
+
+## Checking a Deployment
+
+The validation harness checks any HARP deployment, whoever owns it. It runs from a clone of the
+HARP repository:
+
+```bash
+git clone https://github.com/TEAMuP-dev/HARP.git
+cd HARP
+pip install -r model_validation/requirements.txt
+```
+
+**Before deploying**, run the app from its folder on your machine, with its requirements
+installed. The harness starts the app, calls `/controls` and `/process` as HARP does, and sends
+inputs the app cannot use, such as an unreadable file, each of which it must refuse with a
+`gr.Error`. No token is needed.
+
+```bash
+python model_validation/src/validate_models.py --local-examples /path/to/app
+```
+
+**Once it is a Space**, check its files against these guidelines. Nothing is run, so this wakes no
+Space and spends no ZeroGPU allowance, and a public Space needs no token. Each finding names the
+section of this document that states the rule.
+
+```bash
+python model_validation/src/validate_models.py --lint --spaces <owner>/<name>
+```
+
+**Then run the Space itself.** This makes the same calls as the local run, and also compares the
+Space README with its model card. It needs a Hugging Face token in `HF_TOKEN`, and a Space on
+ZeroGPU draws on the allowance of that token. Add `--load-only` to stop after `/controls`.
+
+```bash
+export HF_TOKEN=hf_...
+python model_validation/src/validate_models.py --spaces <owner>/<name>
+```
+
+The
+[harness README](https://github.com/TEAMuP-dev/HARP/blob/main/model_validation/README.md)
+covers the reports, the other options, and how to write test cases for a model.

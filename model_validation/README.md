@@ -66,9 +66,16 @@ the `HF_TOKEN` environment variable.
 
 A spaces run checks the token once before it starts. A rejected token stops
 the run with exit code `2`, rather than failing every space in turn. A token
-that is valid but cannot restart spaces in the organization draws a warning,
-since only the restart of a crashed space needs write access. The run then
-continues, reporting crashed spaces instead of attempting to recover them.
+that is valid but cannot restart the spaces the run touches draws a warning
+that names their owners, since only the restart of a crashed space needs write
+access. The run then continues, reporting crashed spaces instead of attempting
+to recover them.
+
+A lint of named Spaces (`--lint --spaces ...`) is the one run on Hugging Face
+that goes ahead without a token, since it only reads and anyone can read a
+public Space. It then reports a private Space as one it could not read. A lint
+of the whole organization still needs the token, so that a missing one stops
+the run instead of leaving the private Spaces out.
 
 ## Running Locally
 
@@ -117,6 +124,14 @@ name for you, so `pitch_shifter` means `teamup-tech/pitch_shifter` for
 `--local-examples`. Write `<owner>/<name>` on `--spaces` to reach another
 organization, or give `--local-examples` a path to an example kept outside
 `pyharp/examples/`.
+
+**A deployment of your own.** Those two forms are all it takes to check a model
+that is not ours, and
+[Checking a Deployment](../docs/DEPLOYMENT.md#checking-a-deployment) in the
+deployment guide gives the three commands. Such a model gets the common test
+cases. For cases of its own, copy [config.yml](config.yml), keep
+`common_test_cases` and `synthesized_inputs`, replace `overrides` with an entry
+for the model, and pass the copy with `--config`.
 
 ## Selecting Models
 
