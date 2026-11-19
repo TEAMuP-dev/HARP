@@ -20,12 +20,12 @@ import mido
 import numpy
 import soundfile
 
-from assets import Assets, check_synthesized_inputs
-from cases import apply_case, fed_kinds, generated_text
-from harness import merge_common_cases, readme_problems
-from refusals import DeclaredAppError, judge_refusal
+from endpoint.cases import apply_case, fed_kinds, generated_text
+from endpoint.harness import merge_common_cases, readme_problems
+from endpoint.refusals import DeclaredAppError, judge_refusal
+from endpoint.validators import VALIDATORS, ValidatorNotApplicable
+from media.assets import Assets, check_synthesized_inputs
 from utils import check_config_values
-from validators import VALIDATORS, ValidatorNotApplicable
 
 
 def gr_error(message, title="Error"):

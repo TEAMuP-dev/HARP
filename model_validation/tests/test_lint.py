@@ -1,5 +1,5 @@
 """
-Regression checks for the lint tier (src/lint.py).
+Regression checks for the lint tier (src/tiers/lint.py).
 
 Each rule is exercised against a small app or requirements file written for
 it, so a change to a rule can be checked without reading any Space:
@@ -16,15 +16,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from lint import apply_exceptions, check_lint_exceptions, lint_files
-from lint_app import LocalModules, lint_app, lint_containers, lint_downloads, lint_revisions
-from lint_base import WARNING, Finding, SpaceFiles
-from lint_requirements import (
+from rules.app import LocalModules, lint_app, lint_containers, lint_downloads, lint_revisions
+from rules.base import WARNING, Finding, SpaceFiles
+from rules.requirements import (
     find_python_file,
     matching_torchaudio,
     read_dockerfile,
     url_reference_pinned,
 )
+from tiers.lint import apply_exceptions, check_lint_exceptions, lint_files
 
 
 # An app laid out as docs/DEPLOYMENT.md asks, which every rule accepts

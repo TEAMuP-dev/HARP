@@ -385,7 +385,8 @@ and a server disconnect. None of these has an expected duration to wait out,
 which is why they are bounded by a retry count rather than by a deadline, and
 the retry usually surfaces the real behavior of the model.
 
-This list is `TRANSIENT_MARKERS` in [src/harness.py](src/harness.py), and it
+This list is `TRANSIENT_MARKERS` in
+[src/endpoint/harness.py](src/endpoint/harness.py), and it
 is deliberately narrow. A retried `/process` call reserves ZeroGPU allowance
 again, so a marker that also fires on a genuine failure multiplies what that
 failure costs and delays the real error. It is why a dropped connection is not
@@ -718,9 +719,9 @@ own length in seconds. `min_notes` counts note-on events.
 
 #### Custom Validators
 
-Registered in [validators.py](src/validators.py) and referenced by name, with
-the parameters of each validator nested beneath it so they stay separate from
-the fields of the test case. A case may run several:
+Registered in [validators.py](src/endpoint/validators.py) and referenced by
+name, with the parameters of each validator nested beneath it so they stay
+separate from the fields of the test case. A case may run several:
 
 ```yaml
       - name: labels-line-up
@@ -779,8 +780,9 @@ python -m unittest discover -s model_validation/tests -v
 
 These need no token and no network.
 
-Add custom validators to [validators.py](src/validators.py), registered with the `@validator` decorator
-under the name test cases will reference:
+Add custom validators to [validators.py](src/endpoint/validators.py),
+registered with the `@validator` decorator under the name test cases will
+reference:
 
 ```python
 @validator("labels_sorted")
@@ -795,8 +797,9 @@ def labels_sorted(outputs, controls, params):
 
 Before writing one, check whether an `expect` rule would do. If the check is a
 generally useful property of a single output, consider adding it to the
-`expect` vocabulary (`EXPECT_RULES` in [expectations.py](src/expectations.py)) instead of
-putting it in a one-off validator.
+`expect` vocabulary (`EXPECT_RULES` in
+[expectations.py](src/endpoint/expectations.py)) instead of putting it in a
+one-off validator.
 
 ### 4. Reuse a Case
 
@@ -910,10 +913,10 @@ The case fails when `/process`
 
 Telling a `gr.Error` from any other exception takes the error payload Gradio
 sends, which carries a `title` for a `gr.Error` alone, so the harness records
-which fields arrived (see [refusals.py](src/refusals.py)). A `gr.Error` raised
-inside the GPU call passes through ZeroGPU with its title, so it passes this
-check as well, although the GPU was reserved for it. Where a check sits only
-the code can show.
+which fields arrived (see [refusals.py](src/endpoint/refusals.py)). A
+`gr.Error` raised inside the GPU call passes through ZeroGPU with its title,
+so it passes this check as well, although the GPU was reserved for it. Where a
+check sits only the code can show.
 
 Cases expecting an error run after the other cases of a model, so that a worker
 still loading after a restart answers a real request first, rather than holding

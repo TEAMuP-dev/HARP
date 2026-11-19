@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import numpy
 import soundfile
 
-from assets import Assets, check_synthesized_inputs
+from media.assets import Assets, check_synthesized_inputs
 
 
 class SourceTest(unittest.TestCase):

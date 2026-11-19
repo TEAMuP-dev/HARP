@@ -10,7 +10,7 @@ Both tiers funnel into run_endpoint_tests(), which verifies that:
     3. every configured /process test case produces valid outputs, or for a
        case expecting an error, refuses its input with a gr.Error.
 
-The drivers that get a model to that point live alongside: spaces.py for a
+The drivers that get a model to that point live in tiers/: spaces.py for a
 remote Hugging Face Space, examples.py for a local pyharp example.
 """
 
@@ -21,8 +21,7 @@ from pathlib import Path
 
 from gradio_client import Client
 
-from assets import Assets, input_kind, merge_specs
-from cases import (
+from endpoint.cases import (
     apply_case,
     fed_kinds,
     inspect_outputs,
@@ -30,8 +29,9 @@ from cases import (
     synthesize_default_args,
     validate_outputs,
 )
-from refusals import install as install_refusals
-from refusals import judge_refusal
+from endpoint.refusals import install as install_refusals
+from endpoint.refusals import judge_refusal
+from media.assets import Assets, input_kind, merge_specs
 from results import FAIL, PASS, SKIP, CaseResult, ModelResult
 from utils import describe_exception, run_with_timeout
 
