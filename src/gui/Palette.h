@@ -2,7 +2,7 @@
  * @file Palette.h
  * @brief Colours, fonts, and section headers of HARP's shared look, apart from the parts that
  *        present models.
- * @author cwitkowitz
+ * @author TEAMuP
  */
 
 #pragma once

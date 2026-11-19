@@ -217,7 +217,7 @@ guide to [adding an API provider](https://github.com/TEAMuP-dev/HARP/blob/main/d
 describes.
 
 <!-- #region version-compatibility -->
-HARP 4.0.0 pairs with pyharp 0.4.2, and the two are released together. The root `VERSION` file
+HARP 4.1.0 pairs with pyharp 0.4.2, and the two are released together. The root `VERSION` file
 sets the application version through CMake.
 <!-- #endregion version-compatibility -->
 

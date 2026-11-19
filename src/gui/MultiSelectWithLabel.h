@@ -1,7 +1,7 @@
 /**
  * @file MultiSelectWithLabel.h
  * @brief Custom multiple-selection dropdown component with label.
- * @author cwitkowitz
+ * @author TEAMuP
  */
 
 #pragma once

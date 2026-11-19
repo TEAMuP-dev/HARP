@@ -1,7 +1,7 @@
 /**
  * @file CopyLinux.cpp
  * @brief Copy file path to clipboard on Linux.
- * @author cwitkowitz, JEYuhas
+ * @author TEAMuP
  */
 
 extern "C"

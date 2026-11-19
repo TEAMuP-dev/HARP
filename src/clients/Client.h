@@ -1,7 +1,7 @@
 /**
  * @file Client.h
  * @brief Helper functions, shared functionality, and parent class for interacting with APIs.
- * @author cwitkowitz, VedMistry42, huiranyu, xribene
+ * @author TEAMuP
  */
 
 #pragma once

@@ -1,7 +1,7 @@
 /**
  * @file GradioClient.h
  * @brief Client specifics for Gradio and Hugging Face (simple JSON requests).
- * @author cwitkowitz, saumya-pailwan, xribene, huiranyu
+ * @author TEAMuP
  */
 
 #pragma once

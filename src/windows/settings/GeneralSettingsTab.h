@@ -1,7 +1,7 @@
 /**
  * @file GeneralSettingsTab.h
  * @brief Tab with general settings and maintenance actions.
- * @author saumya-pailwan, cwitkowitz, lindseydeng, huiranyu
+ * @author TEAMuP
  */
 
 #pragma once

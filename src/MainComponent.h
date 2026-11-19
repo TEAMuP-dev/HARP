@@ -1,7 +1,7 @@
 /**
  * @file MainComponent.h
  * @brief Top-level component containing all HARP GUI elements and state.
- * @author cwitkowitz, saumya-pailwan, xribene, hugofloresgarcia
+ * @author TEAMuP
  */
 
 #pragma once

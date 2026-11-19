@@ -78,7 +78,7 @@ before starting one under the debugger.
 
 To release a version, update `VERSION` and `RELEASE.md`, name the PyHARP it pairs with in the root
 `README.md`, which [Setting Up PyHARP](/pyharp/setup#versions) includes, and push a tag
-such as `v4.0.0`. The [download page](/download/) builds its download links from `VERSION`,
+such as `v4.1.0`. The [download page](/download/) builds its download links from `VERSION`,
 so they lead to the packages of the new release once the workflow publishes them. The demo files it
 links are an asset of the 4.0.0 release, and
 [Demo Files](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEMO_FILES.md) lists their contents

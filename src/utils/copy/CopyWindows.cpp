@@ -1,7 +1,7 @@
 /**
  * @file CopyWindows.cpp
  * @brief Copy file path to clipboard on Windows.
- * @author JEYuhas
+ * @author TEAMuP
  */
 
 #include <Shlobj.h>

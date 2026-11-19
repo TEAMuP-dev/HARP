@@ -1,7 +1,7 @@
 /**
  * @file ComboBoxWithLabel.h
  * @brief Custom dropdown component with label.
- * @author cwitkowitz, saumya-pailwan, xribene
+ * @author TEAMuP
  */
 
 #pragma once

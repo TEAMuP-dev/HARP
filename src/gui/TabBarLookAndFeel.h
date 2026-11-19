@@ -1,7 +1,7 @@
 /**
  * @file TabBarLookAndFeel.h
  * @brief The look of a tab bar, shared by the model tabs and the settings window.
- * @author cwitkowitz, VedMistry42
+ * @author TEAMuP
  */
 
 #pragma once

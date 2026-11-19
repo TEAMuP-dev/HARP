@@ -1,7 +1,7 @@
 /**
  * @file PopupPanel.h
  * @brief Popup shown inside a window, over a dimmed view of whatever else the window holds.
- * @author cwitkowitz
+ * @author TEAMuP
  */
 
 #pragma once

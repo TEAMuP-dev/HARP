@@ -1,7 +1,7 @@
 /**
  * @file AboutWindow.h
  * @brief Window containing basic information and links.
- * @author cwitkowitz, hugofloresgarcia
+ * @author TEAMuP
  */
 
 #pragma once

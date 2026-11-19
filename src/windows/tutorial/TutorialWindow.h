@@ -1,7 +1,7 @@
 /**
  * @file TutorialWindow.h
  * @brief Window walking a new user through HARP, step by step.
- * @author cwitkowitz, saumya-pailwan
+ * @author TEAMuP
  */
 
 #pragma once

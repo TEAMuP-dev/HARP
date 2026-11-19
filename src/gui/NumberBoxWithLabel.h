@@ -1,7 +1,7 @@
 /**
  * @file NumberBoxWithLabel.h
  * @brief Custom number box component with label.
- * @author cwitkowitz, saumya-pailwan
+ * @author TEAMuP
  */
 
 #pragma once

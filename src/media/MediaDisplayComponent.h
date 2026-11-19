@@ -1,7 +1,7 @@
 /**
  * @file MediaDisplayComponent.h
  * @brief Parent class for shared functionality of media displays.
- * @author cwitkowitz, 2cylu2, xribene, nathanpruyne, JEYuhas
+ * @author TEAMuP
  */
 
 #pragma once

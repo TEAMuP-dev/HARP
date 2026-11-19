@@ -1,7 +1,7 @@
 /**
  * @file HomeTab.h
  * @brief Home tab for browsing the model catalog and opening models in new tabs.
- * @author cwitkowitz, 2cylu2, JEYuhas, VedMistry42
+ * @author TEAMuP
  */
 
 #pragma once

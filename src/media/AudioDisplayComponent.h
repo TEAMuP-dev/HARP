@@ -1,7 +1,7 @@
 /**
  * @file AudioDisplayComponent.h
  * @brief Display specifics for audio (waveform).
- * @author cwitkowitz, xribene
+ * @author TEAMuP
  */
 
 #pragma once

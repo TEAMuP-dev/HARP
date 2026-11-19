@@ -1,7 +1,7 @@
 /**
  * @file SettingsWindow.h
  * @brief Window containing tabbed settings for HARP.
- * @author cwitkowitz, lindseydeng
+ * @author TEAMuP
  */
 
 #pragma once

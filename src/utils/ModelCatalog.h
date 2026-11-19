@@ -1,7 +1,7 @@
 /**
  * @file ModelCatalog.h
  * @brief The models HARP offers for browsing on the Home tab.
- * @author cwitkowitz
+ * @author TEAMuP
  *
  * The catalog combines the models whose controls ship with HARP (Stability AI), every
  * Space of the HARP organization on Hugging Face, and any other paths the user has loaded

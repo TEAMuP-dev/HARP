@@ -1,7 +1,7 @@
 /**
  * @file ResizeEdge.h
  * @brief Strip along the edge of a panel that is dragged to resize it.
- * @author cwitkowitz, NatalieElizabeth
+ * @author TEAMuP
  */
 
 #pragma once

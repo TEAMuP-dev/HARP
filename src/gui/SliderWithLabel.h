@@ -1,7 +1,7 @@
 /**
  * @file SliderWithLabel.h
  * @brief Custom slider component with label.
- * @author cwitkowitz, xribene, saumya-pailwan
+ * @author TEAMuP
  */
 
 #pragma once

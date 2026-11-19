@@ -1,7 +1,7 @@
 /**
  * @file MediaClipboardWidget.h
  * @brief Component that manages cached (non-model-specific) media files HARP.
- * @author cwitkowitz, rzhu15
+ * @author TEAMuP
  */
 
 #pragma once

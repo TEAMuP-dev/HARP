@@ -1,7 +1,7 @@
 /**
  * @file Interface.h
  * @brief Simple helper functions for interface.
- * @author cwitkowitz, hugofloresgarcia, JEYuhas
+ * @author TEAMuP
  */
 
 #pragma once

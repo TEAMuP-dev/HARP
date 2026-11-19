@@ -1,7 +1,7 @@
 /**
  * @file CopyMacOS.mm
  * @brief Copy file path to clipboard on MacOS.
- * @author JEYuhas
+ * @author TEAMuP
  */
 
 #import <Cocoa/Cocoa.h>

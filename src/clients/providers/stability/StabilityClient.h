@@ -1,7 +1,7 @@
 /**
  * @file StabilityClient.h
  * @brief Client specifics for Stability AI (multipart requests).
- * @author cwitkowitz, xribene, huiranyu, lindseydeng
+ * @author TEAMuP
  */
 
 #pragma once

@@ -1,7 +1,7 @@
 /**
  * @file Clients.h
  * @brief Helper functions for creating an appropriate client.
- * @author cwitkowitz
+ * @author TEAMuP
  */
 
 #pragma once
