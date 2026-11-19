@@ -11,13 +11,13 @@
 #
 # Results are published to the run summary and uploaded as artifacts.
 #
-# Model failures do not fail the workflow, since deployments are not yet
-# stable enough for a daily red run to be actionable. They appear as warning
-# annotations instead. Only infrastructure errors (e.g., a bad token, a
-# discovery failure, or a configuration mistake) turn the run red, since those
-# mean validation itself has stopped working. To be notified of model failures
-# later, remove the exit-code handling in the Validate and Lint steps so that
-# exit code 1 propagates.
+# A job fails when any of its models does (exit code 1), and when validation itself could not
+# proceed, because of a bad token, a discovery failure, or a configuration mistake, for
+# example (exit code 2). The summary and the report are published either way.
+#
+# The daily run is started by model_validation_schedule.yml rather than by a schedule here,
+# so that a failing model turns the run red without anyone being emailed about it each day.
+# A run started by hand does notify whoever started it.
 #
 # Requires the repository secret HF_TOKEN, a Hugging Face token with read
 # access to the teamup-tech Spaces (and write access to restart crashed ones).
@@ -26,8 +26,6 @@
 name: Model Validation
 
 on:
-  schedule:
-    - cron: '45 4 * * *'   # daily, 04:45 UTC
   workflow_dispatch:
     inputs:
       spaces:
@@ -81,15 +79,8 @@ jobs:
 
       - name: Validate local examples
         run: |
-          set +e
           python model_validation/src/validate_models.py --local-examples \
             --output-dir reports/examples
-          CODE=$?
-          if [ "$CODE" -eq 1 ]; then
-            echo "::warning title=Example failures::Some local examples failed - see the run summary and report artifact."
-            exit 0
-          fi
-          exit "$CODE"
 
       - name: Publish summary
         if: always()
@@ -143,14 +134,7 @@ jobs:
           if [ "$INPUT_RESTART_FAILED" = "false" ]; then
             ARGS+=(--no-restart-failed)
           fi
-          set +e
           python model_validation/src/validate_models.py "${ARGS[@]}"
-          CODE=$?
-          if [ "$CODE" -eq 1 ]; then
-            echo "::warning title=Space failures::Some spaces failed validation - see the run summary and report artifact."
-            exit 0
-          fi
-          exit "$CODE"
 
       - name: Publish summary
         if: always()
@@ -191,14 +175,7 @@ jobs:
             read -r -a SPACE_IDS <<< "$INPUT_SPACES"
             ARGS+=(--spaces "${SPACE_IDS[@]}")
           fi
-          set +e
           python model_validation/src/validate_models.py "${ARGS[@]}"
-          CODE=$?
-          if [ "$CODE" -eq 1 ]; then
-            echo "::warning title=Lint findings::Some spaces depart from docs/DEPLOYMENT.md - see the run summary and report artifact."
-            exit 0
-          fi
-          exit "$CODE"
 
       - name: Publish summary
         if: always()
