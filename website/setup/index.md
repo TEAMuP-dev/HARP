@@ -1,3 +1,7 @@
+---
+description: Set up HARP as a standalone editor or beside a DAW, as its external sample editor or by exchanging files.
+---
+
 # Setting Up HARP
 
 HARP runs as a [standalone](/setup/standalone) editor, or beside a DAW. A DAW works with HARP

@@ -1,9 +1,20 @@
+---
+description: Host a PyHARP app on Hugging Face Spaces, with plans and hardware, ZeroGPU, Docker, and how HARP lists Spaces on its Home tab.
+---
+
 # Hosting on Hugging Face Spaces
 
 A [Space](https://huggingface.co/docs/hub/spaces-overview) runs an app on Hugging Face's hardware,
 at a permanent address, so that it runs independently of your machine and is available to others. HARP
 opens any public Space by its id, _e.g._, `teamup-tech/Demucs`, and most of the models on its Home
 tab are Spaces.
+
+::: tip
+We offer to host select models under the [TEAMuP organization](https://huggingface.co/teamup-tech)
+on Hugging Face and to feature them on HARP's Home tab. Every model featured there follows our
+[deployment guidelines](/pyharp/guidelines), which state in full the rules that this page
+summarizes.
+:::
 
 ## Plans and Hardware
 
@@ -12,8 +23,7 @@ tab are Spaces.
 On a paid plan, choose the hardware by measuring a request with ten seconds of input on a CPU. A
 model faster than real time belongs on `cpu-basic`, where a request costs the user nothing. A slower
 one belongs on ZeroGPU, which accelerates PyTorch alone.
-[Choosing the Hardware](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#choosing-the-hardware)
-gives the full rule.
+[Choosing the Hardware](/pyharp/guidelines#choosing-the-hardware) gives the full rule.
 
 ## Deploying Example 2
 
@@ -44,14 +54,17 @@ account can host it too.
    git push
    ```
 
-4. **Watch it build.** The page of the Space shows the progress of the build, and `Logs` shows the
-   output of installing the requirements and starting `app.py`, which is where an error appears if
-   the Space fails to start. Once the status reads `Running`, try the app on the page.
+4. **Watch it build.** The page of the Space shows its status, and its `Logs` panel has two tabs.
+   The `Build` tab shows pip installing the requirements, which takes five to ten minutes. The
+   `Container` tab then shows `app.py` starting and downloading the weights, and ends with
+   `Running on local URL`. An error at startup appears there, as does the traceback when HARP
+   reports that a job failed. Once the status reads `Running`, try the app on the page.
 
    ![The page of a Space, with its logs open](/images/space-logs.png)
 
 5. **Open it in HARP.** On the `Home` tab, click `Custom Path...`, enter `<USERNAME>/demucs`, and
-   click `Load`.
+   click `Load`. The model keeps a card on the `Home` tab until the X button on that card removes
+   it.
 
 The YAML at the top of `README.md` configures the Space:
 
@@ -83,14 +96,14 @@ tags:
   does not list Gradio. HARP needs 6.13 or newer to report why a job failed.
 - **`python_version`** is the Python the Space runs. ZeroGPU runs 3.10 or 3.12, and no other
   version.
+- **`app_file`** names the script that the Space runs.
 - **`license`** is the license of the model, which HARP shows on its badge.
 - **`short_description`** and **`tags`** describe the model on HARP's Home tab before it is
   loaded. The tags are the full list of the model card, including the `input:` and `output:` tags
   that PyHARP infers. Launch the app with `build_endpoint(..., show_controls=True)` and click
   `View Controls` to copy them.
 
-[Space README](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#space-readme)
-describes each field.
+[Space README](/pyharp/guidelines#space-readme) describes each field.
 
 ## ZeroGPU
 
@@ -102,10 +115,9 @@ Example 2 shows what an app needs: `spaces` in `requirements.txt` and imported f
 function decorated with `@spaces.GPU` (a ZeroGPU Space without one fails at startup), the model
 placed on its device as the worker loads it, checks in `process_fn` before the GPU is reserved, a
 `duration` sized to each request, and a `torch` release that ZeroGPU supports.
-[Hardware Portability](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#hardware-portability)
-and
-[Protecting the Caller's Allowance](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#protecting-the-callers-allowance)
-explain each rule.
+[Hardware Portability](/pyharp/guidelines#hardware-portability) and
+[Protecting the Caller's Allowance](/pyharp/guidelines#protecting-the-callers-allowance) explain
+each rule.
 
 ## Gradio or Docker
 
@@ -119,7 +131,7 @@ A Space runs an app with one of two SDKs:
 
 Choose Docker only when a model cannot share an environment with Gradio 6, and first check whether
 an older release of Gradio 6 resolves the conflict, as it does for models tied to `transformers`
-4.x (see [Dependency Conflicts](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#dependency-conflicts)).
+4.x (see [Dependency Conflicts](/pyharp/guidelines#dependency-conflicts)).
 
 Our [BeatNet](https://huggingface.co/spaces/teamup-tech/BeatNet/tree/main) Space is an example.
 BeatNet relies on madmom, whose release supports Python 3.9 and an old NumPy, while Gradio 6 needs
@@ -156,7 +168,9 @@ that needs a GPU there has to pay for one.
   against which the app was tested.
 - **Binary files**, such as weights or test audio, go through Git LFS, as the
   [Binary Files](https://github.com/TEAMuP-dev/pyharp#binary-files) section of the PyHARP README
-  describes. `hf upload` from the `huggingface_hub` package handles them without Git.
+  describes. `hf upload` from the `huggingface_hub` package handles them without Git. Weights can
+  also stay in a repository of their own on the Hub, from which the app downloads them, as
+  Example 2 does.
 - **Keys and tokens** belong in the secrets of the Space, under `Settings`, which reach the app as
   environment variables. Never commit them.
 - **A private Space** opens in HARP only with a Hugging Face key from an account that can see it.
@@ -165,8 +179,9 @@ that needs a GPU there has to pay for one.
 
 HARP lists the public Spaces of the [TEAMuP organization](https://huggingface.co/teamup-tech) on its
 Home tab, and describes each with the `short_description` and `tags` of its README until it is
-loaded. A Space under any other account opens as a custom path. To have a model featured there,
-contact us.
+loaded. A Space under any other account opens as a custom path. We offer to host select models
+under the organization, and each Space there is checked daily against our
+[deployment guidelines](/pyharp/guidelines).
 
 ## Hosting Elsewhere
 

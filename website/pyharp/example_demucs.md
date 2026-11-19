@@ -1,14 +1,23 @@
+---
+description: A walkthrough of the PyHARP app behind Demucs, which separates a song into stems on a ZeroGPU Space.
+---
+
 # Example 2: Stem Separation
 
 This example walks through the app behind our
 [Demucs](https://huggingface.co/spaces/teamup-tech/Demucs) model, which separates a song into
 drums, bass, vocals, and other, and which [Using Hosted Models](/usage/models) runs in HARP.
-It adds what larger models need to [Example 1](/pyharp/example_skey): weights read from
-a mirror on the Hub, a choice among several models built as the app starts, a GPU reserved for each
-request in proportion to its length, and results in the format of the input.
+It adds what larger models need to [Example 1](/pyharp/example_skey): a GPU reserved for each
+request in proportion to its length, weights read from a mirror on the Hub, a choice among several
+models built as the app starts, and results in the format of the input.
 
 The code shown is the deployed app, at revision
 [`cf386f1`](https://huggingface.co/spaces/teamup-tech/Demucs/tree/cf386f15ccde5e0fd7dc332b8e6509d3f22d7ec8).
+
+::: tip
+This app follows our [deployment guidelines](/pyharp/guidelines), against which we check every
+model we host. The steps below link the sections that apply.
+:::
 
 ## 1. Get the Code
 
@@ -22,11 +31,52 @@ hf download teamup-tech/Demucs --repo-type space --local-dir . \
 pip install -r requirements.txt
 ```
 
-The Space holds `app.py`, `requirements.txt`, and `README.md`. The requirements pin the `demucs`
-package, and a release of PyTorch that ZeroGPU supports. Demucs also runs on a CPU, more slowly, so
-the app works without a GPU.
+The Space holds `app.py`, `requirements.txt`, and `README.md`. The requirements pin PyHARP to a
+release tag, `demucs` and its dependencies to exact versions, and PyTorch to a release that ZeroGPU
+supports. They also list `spaces`, the package through which an app uses ZeroGPU. Demucs also runs
+on a CPU, more slowly, so the app works without a GPU.
 
-## 2. Build the Models at Startup
+## 2. Reserve a GPU for Each Request
+
+```python
+import spaces
+
+# ...
+
+# The mixture is separated in overlapping segments, so the cost grows with its length
+# PyHARP stops a job that runs past its timeout_s, 15 minutes by default, so a request whose
+# reservation would exceed that is refused rather than started. A shorter one is left to
+# ZeroGPU, which admits it when the caller's own allowance covers it.
+MAX_GPU_SECONDS = 900
+
+
+def gpu_seconds(audio_file_path: str, model_name: str) -> float:
+    # Measured at about 18 s for 300 s with htdemucs, uploading included, and padded for the
+    # slower mdx models
+    return 10 + 0.15 * sf.info(audio_file_path).duration
+
+
+# Separation Logic
+@spaces.GPU(duration=gpu_seconds)
+def separate_all_stems(audio_file_path: str, model_name: str):
+```
+
+A ZeroGPU Space has no GPU of its own. One is attached for the length of each call to a function
+decorated with `@spaces.GPU`, and between calls `spaces` stands in for CUDA:
+`torch.cuda.is_available()` returns `True`, and a model moved to `"cuda"` is placed on the real GPU
+once a call begins. For this to work, `spaces` has to be imported before anything that loads
+PyTorch, which is why it is the first line of `app.py`.
+
+`duration` is the longest a call may run, and takes either a number or a function of the same
+arguments as the decorated function. Demucs reserves 10 seconds plus 0.15 seconds per second of
+audio, which was measured on real songs and padded. A call that outlasts its reservation is stopped,
+and ZeroGPU admits a call only when the allowance of the caller covers it, so sizing the reservation
+to the request lets a short clip through where a fixed, generous one would not. Off ZeroGPU, the
+decorator does nothing.
+[Protecting the Caller's Allowance](/pyharp/guidelines#protecting-the-callers-allowance) gives the
+rules for sizing a reservation.
+
+## 3. Build the Models at Startup
 
 ```python
 DEMUX_MODELS = ["htdemucs", "mdx_extra", "mdx_extra_q"]
@@ -57,37 +107,12 @@ The `demucs` package downloads the weights of a variant from a server of its aut
 it is loaded. The app reads them instead from a mirror on the Hub, pinned to one revision, and links
 each checkpoint where `torch.hub` looks before downloading. It then builds and places all three
 variants in the worker as the app starts, so that no request waits on a download or a build, which
-on ZeroGPU would run inside its GPU reservation. The three fit in memory together. A family of
-larger models would build its default here, and each other model the first time a request selects
-it.
-
-## 3. Reserve a GPU for Each Request
-
-```python
-# The mixture is separated in overlapping segments, so the cost grows with its length
-# PyHARP stops a job that runs past its timeout_s, 15 minutes by default, so a request whose
-# reservation would exceed that is refused rather than started. A shorter one is left to
-# ZeroGPU, which admits it when the caller's own allowance covers it.
-MAX_GPU_SECONDS = 900
-
-
-def gpu_seconds(audio_file_path: str, model_name: str) -> float:
-    # Measured at about 18 s for 300 s with htdemucs, uploading included, and padded for the
-    # slower mdx models
-    return 10 + 0.15 * sf.info(audio_file_path).duration
-
-
-# Separation Logic
-@spaces.GPU(duration=gpu_seconds)
-def separate_all_stems(audio_file_path: str, model_name: str):
-```
-
-`duration` is the longest a call may run, and takes either a number or a function of the same
-arguments as the decorated function. Demucs reserves 10 seconds plus 0.15 seconds per second of
-audio, which was measured on real songs and padded. A call that outlasts its reservation is stopped,
-and ZeroGPU admits a call only when the allowance of the caller covers it, so sizing the reservation
-to the request lets a short clip through where a fixed, generous one would not. Off ZeroGPU, the
-decorator does nothing.
+on ZeroGPU would run inside its GPU reservation. `DEVICE` is `"cuda"` there, where `spaces` answers
+for a GPU that is not yet attached, and `"cpu"` on a machine without a GPU, so the same lines run
+on any hardware. The three fit in memory together. A family of larger models would build its
+default here, and each other model the first time a request selects it.
+[Model Weights](/pyharp/guidelines#model-weights) lists the other places from which an app can
+read its weights.
 
 ## 4. Check the Request First
 
@@ -116,7 +141,8 @@ def process_fn(audio_file_path, model_name):
 
 `process_fn` checks the input before `separate_all_stems` reserves a GPU, and refuses a song too
 long to finish within the 15 minutes PyHARP allows a job. A refused request spends none of the
-allowance of the caller.
+allowance of the caller, and HARP shows the message of its `gr.Error` in the error popup (see
+[Error Reporting](/pyharp/guidelines#error-reporting)).
 
 ## 5. Keep the Input Format
 
@@ -178,8 +204,8 @@ Demucs runs on 44.1 kHz stereo, so the app resamples the input for the model, an
 input across two channels. It then returns each stem at the sample rate and channel count of the
 input, and in the container of the input if that is WAV or FLAC. A result in the format of its input
 replaces the original in a DAW session without conversion.
-[Preserving the Input Format](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#preserving-the-input-format)
-explains why a lossy or AIFF input comes back as WAV.
+[Preserving the Input Format](/pyharp/guidelines#preserving-the-input-format) explains why a lossy
+or AIFF input comes back as WAV.
 
 ## 6. Add a Choice and More Outputs
 
@@ -239,6 +265,23 @@ python app.py
 The first start downloads the weights of all three variants, about 920 MB. Open
 `http://localhost:7860` in HARP as a custom path, drag a song onto `Input Audio`, choose a variant,
 and select `Process`. The stems fill the `Drums`, `Bass`, `Vocals`, and `Other` tracks.
+
+## The Guidelines It Follows
+
+The app applies the rules that our [deployment guidelines](/pyharp/guidelines) set for every
+model, these among them:
+
+- **Pin what the app installs and downloads**: PyHARP to a release tag, the packages of the model
+  to exact versions, and the weights to a revision (see
+  [Versions and Compatibility](/pyharp/guidelines#versions-and-compatibility)).
+- **Run Python 3.10 or 3.12** on ZeroGPU, which supports no other version. The `README.md` of the
+  Space sets it (see [Hosting Models](/hosting/spaces#deploying-example-2)).
+- **Check the request before the GPU is reserved** (see
+  [Protecting the Caller's Allowance](/pyharp/guidelines#protecting-the-callers-allowance)).
+- **Keep the format of the input** (see
+  [Preserving the Input Format](/pyharp/guidelines#preserving-the-input-format)).
+- **Launch with `ssr_mode=False`**, since the server-side rendering it turns off can crash a Space
+  as it starts (see [Structure of app.py](/pyharp/guidelines#structure-of-apppy)).
 
 ## Going Further
 

@@ -1,9 +1,19 @@
+---
+description: Install PyHARP, run an example app, open it in HARP, and learn how HARP reads the interface of a Gradio app.
+---
+
 # Setting Up PyHARP
 
 HARP can load any [Gradio](https://www.gradio.app) app that follows a few conventions, and
 [PyHARP](https://github.com/TEAMuP-dev/pyharp) is the Python library that applies them. This page
 installs PyHARP, runs one of its examples, and opens the example in HARP, then describes how HARP
 and an app communicate.
+
+::: tip
+Our [deployment guidelines](/pyharp/guidelines) state the conventions that every model we host
+follows, and what to decide while building an app: licensing, the model card, weights, error
+reporting, the format of results, and hardware.
+:::
 
 ## Install
 
@@ -116,8 +126,8 @@ Each Gradio component becomes part of the model tab in HARP:
 - `gr.JSON`, returning a `LabelList`, shows labels over an output track.
 
 The PyHARP [README](https://github.com/TEAMuP-dev/pyharp#readme) documents the library in full,
-and our [deployment guidelines](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md)
-describe the conventions the models we host follow.
+and our [deployment guidelines](/pyharp/guidelines) describe the conventions the models we host
+follow.
 
 ## Next Steps
 
@@ -125,5 +135,7 @@ describe the conventions the models we host follow.
   of a song.
 - [Example 2](/pyharp/example_demucs) walks through a larger one that separates stems
   on a GPU.
+- [Deployment Guidelines](/pyharp/guidelines) states the conventions of the models we host, which
+  a model has to follow to be featured on HARP's Home tab.
 - [Hosting Models](/hosting/spaces) puts an app online, so that it runs independently of
   your machine.

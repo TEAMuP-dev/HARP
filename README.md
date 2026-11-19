@@ -5,12 +5,20 @@
 
 # HARP
 
-![HARP processing a region opened from a DAW session](website/public/images/hero.png)
+[![Release](https://img.shields.io/github/v/release/TEAMuP-dev/HARP)](https://github.com/TEAMuP-dev/HARP/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/TEAMuP-dev/HARP/build.yml?branch=main&label=build)](https://github.com/TEAMuP-dev/HARP/actions/workflows/build.yml)
+[![License](https://img.shields.io/github/license/TEAMuP-dev/HARP)](https://github.com/TEAMuP-dev/HARP/blob/main/LICENSE)
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Fharp.tools&label=harp.tools)](https://harp.tools/)
+[![ISMIR 2026 Tutorial](https://img.shields.io/badge/ISMIR%202026-Tutorial-orange)](https://ismir2026.ismir.net/tutorials#page-section-2)
+<!-- TODO: Netlify deploy status. The badge needs the ID of the Netlify project, which Netlify
+     shows with the badge itself under Project configuration > General > Status badges. Replace
+     PROJECT_ID with it.
+[![Netlify Status](https://api.netlify.com/api/v1/badges/PROJECT_ID/deploy-status)](https://app.netlify.com/sites/teamup-harp/deploys) -->
+<!-- TODO: arXiv badge, once the journal paper on HARP has a preprint. Replace XXXX.XXXXX with its
+     ID.
+[![arXiv](https://img.shields.io/badge/arXiv-XXXX.XXXXX-b31b1b)](https://arxiv.org/abs/XXXX.XXXXX) -->
 
-<!--![Build status](https://img.shields.io/github/actions/workflow/status/TEAMuP-dev/HARP/build.yml?branch=main) -->
-<!--[![Netlify Status](https://api.netlify.com/api/v1/badges/d84e0881-13d6-49b6-b743-d176b175aa79/deploy-status)](https://app.netlify.com/sites/teamup-harp/deploys) -->
-<!-- TODO: arXiv badge, once the HARP paper has a preprint to link. -->
-<!--[![arXiv](https://img.shields.io/badge/arXiv-2503.02977-b31b1b.svg?style=flat)](https://arxiv.org/abs/2503.02977) -->
+![HARP processing a region opened from a DAW session](website/public/images/hero.png)
 
 <!-- #region overview -->
 HARP is a sample editor for **h**osted, **a**synchronous, **r**emote **p**rocessing of audio and
@@ -185,7 +193,9 @@ which wraps arbitrary Python code in a HARP-compatible Gradio app. Our website w
 [deploying a model](https://harp.tools/pyharp/setup.html) from start to
 finish, and our [deployment guidelines](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md)
 describe the conventions our own models follow: licensing, naming and tagging, sourcing weights,
-reporting errors, preserving the input format, and choosing hardware.
+reporting errors, preserving the input format, and choosing hardware. We offer to host select models
+under the [TEAMuP organization](https://huggingface.co/teamup-tech) on Hugging Face and to feature
+them on HARP's Home tab.
 
 <a href="https://github.com/TEAMuP-dev/pyharp">
   <picture>

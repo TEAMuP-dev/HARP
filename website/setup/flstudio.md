@@ -1,3 +1,7 @@
+---
+description: Set HARP as the default audio editor of FL Studio, open a sample in a model, and reload the result.
+---
+
 # FL Studio
 
 FL Studio opens samples in HARP as an external audio editor.

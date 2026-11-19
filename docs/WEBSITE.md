@@ -13,6 +13,7 @@ maintainer. The site is built from [`website/`](../website) with
   - [Moving a Page](#moving-a-page)
 - [Dependencies](#dependencies)
 - [Deploying](#deploying)
+- [Search Engines](#search-engines)
 - [Administration](#administration)
   - [Netlify](#netlify)
   - [Domain](#domain)
@@ -39,7 +40,8 @@ pnpm run docs:dev        # Serves the site at http://localhost:5173, reloading o
   `website/index.md` is the home page. A page at `website/setup/reaper.md` is served at
   `/setup/reaper`.
 - **Navigation**, the sidebar and the top bar, is set in `website/.vitepress/config.mjs`. A new
-  page needs an entry there.
+  page needs an entry there, and a one-sentence `description` in its frontmatter (see
+  [Search Engines](#search-engines)).
 - **Shared text is included, not copied.** Pages include sections of the root `README.md` and of the
   guidelines under `docs/`, which stay the source of truth for them. A section is marked in its
   source with a pair of comments,
@@ -52,8 +54,12 @@ pnpm run docs:dev        # Serves the site at http://localhost:5173, reloading o
 
   and a page includes it with `<!--@include: @/../README.md#build-->`, where `@` is `website/`. An
   include without a region takes the whole file, as `contributing/add_provider.md` does with
-  `docs/PROVIDERS.md`. Included text appears on GitHub and on the site alike, so its links have to
-  be absolute URLs.
+  `docs/PROVIDERS.md`, and `pyharp/guidelines.md` with `docs/DEPLOYMENT.md`. Included text appears
+  on GitHub and on the site alike, so its links have to be absolute URLs.
+- **A link to a heading of the same file**, such as `[Licensing](#licensing)`, is the exception.
+  The site gives a heading the anchor that GitHub gives it (`slugify` in `config.mjs`), unless the
+  heading starts with a digit, so such a link works in both places. VitePress does not check
+  anchors, so follow a new one in the built page.
 - **`website/scripts/check-includes.mjs`** runs before every build, and fails it if an include
   names a file or region that does not exist. VitePress would otherwise include the whole file in
   place of a missing region.
@@ -122,6 +128,37 @@ every build with its log, and publishing an earlier deploy from there rolls the 
 own address. The first rule in `website/public/_redirects` forwards every page there to the same path
 on harp.tools, so that the site is served from one address. The rule names the production address
 alone, so deploy previews and branch deploys are unaffected.
+
+## Search Engines
+
+The build gives a crawler what it needs to index the site, and nothing in the repository or in the
+responses of Netlify blocks one:
+
+- **`sitemap.xml`** lists every page. VitePress writes it from the `hostname` in
+  `website/.vitepress/config.mjs`, and `website/public/robots.txt` names it.
+- **A canonical link** in each page names the one address to index, which has no `.html`, as in
+  the sitemap and in the links between pages (`cleanUrls` in `config.mjs`). Netlify serves each
+  page with `.html` as well, which the links in released versions of HARP use, and the whole site
+  at `main--teamup-harp.netlify.app`. `transformPageData` in `config.mjs` adds the link, along
+  with the Open Graph tags from which a link preview takes its title and description.
+- **A `description`** in the frontmatter of each page is the text a search engine shows beneath
+  the title. A page without one takes the description of the site.
+
+A search engine is slow to find a new domain on its own, and telling it takes an account:
+
+1. In [Google Search Console](https://search.google.com/search-console), add `harp.tools` as a
+   **Domain** property, which covers every address of the site.
+2. Verify it with the TXT record that Search Console gives. Add the record under **Domains** in
+   the Netlify team, which serves the DNS of the domain (see [DNS and HTTPS](#dns-and-https)).
+3. On the **Sitemaps** page, submit `https://harp.tools/sitemap.xml`.
+4. Enter `https://harp.tools/` in the **URL inspection** box, and select the **Request indexing**
+   button. The other pages follow from the sitemap, which can take a few weeks.
+5. Add each maintainer as an owner under **Settings → Users and permissions**, so that the
+   property does not depend on one account.
+
+The **Pages** report then lists the pages that are indexed, and the reason for each that is not.
+[Bing Webmaster Tools](https://www.bing.com/webmasters) imports a verified property from Search
+Console.
 
 ## Administration
 
@@ -198,9 +235,11 @@ Should the site move to another domain:
    Netlify as above. Wait until it loads over HTTPS.
 2. Replace the old address wherever the repository links it: `src/windows/AboutWindow.h` and
    `src/windows/tutorial/TutorialWindow.h`, which are compiled into the app, the root `README.md`,
-   `docs/`, the `hostname` of the sitemap in `website/.vitepress/config.mjs`, and the README of
-   PyHARP, whose images load from the site. `grep -rn "harp.tools" .` finds them.
+   `docs/`, the `hostname` in `website/.vitepress/config.mjs`, `website/public/robots.txt`, and the
+   README of PyHARP, whose images load from the site. `grep -rn "harp.tools" .` finds them.
 3. Add a rule like the first one in `website/public/_redirects`, from the old address to the new, at
    the top, and keep every existing rule. The `!` after its status makes it apply even where a file
    exists at the path, which on this site is every page.
 4. Keep the old domain registered for as long as released apps link it.
+5. Add the new domain to Search Console as above, and report the move with its
+   **Change of Address** tool.

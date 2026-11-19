@@ -1,3 +1,7 @@
+---
+description: Run a hosted model in HARP, and learn what the badges on a model card, API keys, and sleeping Spaces mean.
+---
+
 # Using Hosted Models
 
 The models on HARP's Home tab are hosted by us, as Hugging Face Spaces of the

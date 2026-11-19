@@ -1,3 +1,7 @@
+---
+description: Set HARP as the sample editor of Ableton Live, open a clip in a model, and send the result back to the Set.
+---
+
 # Ableton Live
 
 Ableton Live opens samples in HARP as an external sample editor.
@@ -18,6 +22,13 @@ Ableton Live opens samples in HARP as an external sample editor.
 
 The Live manual describes the setting under
 [Destructive Sample Editing](https://www.ableton.com/en/live-manual/12/clip-view/).
+
+## File Types
+
+HARP writes a result in the format of the sample it replaces, so a WAV result is converted on its
+way back to an AIFF sample. The Live manual describes where Live sets the format of the samples it
+records, under
+[Setting up File Types](https://www.ableton.com/en/live-manual/12/recording-new-clips/#setting-up-file-types).
 
 ## Open Audio in HARP
 

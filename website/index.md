@@ -1,6 +1,8 @@
 ---
 # https://vitepress.dev/reference/default-theme-home-page
 layout: home
+# The title of the browser tab and of a search result, which would otherwise read "HARP" alone
+title: Machine Learning in Your DAW
 
 hero:
   name: "HARP"
@@ -41,3 +43,10 @@ features:
     link: /pyharp/setup
     linkText: Deploy a model
 ---
+
+## Feature Your Model in HARP
+
+We offer to host select models under the [TEAMuP organization](https://huggingface.co/teamup-tech)
+on Hugging Face and to feature them on HARP's Home tab, where every user finds them.
+[Deploying Models with PyHARP](/pyharp/setup) covers building one, and our
+[deployment guidelines](/pyharp/guidelines) state the conventions that a featured model follows.

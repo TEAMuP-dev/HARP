@@ -1,3 +1,7 @@
+---
+description: A walkthrough of the PyHARP app behind S-KEY, which detects the key of a song and shows it as a label over the audio in HARP.
+---
+
 # Example 1: Key Detection
 
 This example walks through the app behind our
@@ -8,6 +12,11 @@ processing a request, and declaring the interface.
 
 The code shown is the deployed app, at revision
 [`10274b3`](https://huggingface.co/spaces/teamup-tech/S-KEY/tree/10274b3ecff836b60521c5cc4d53fb9501df898f).
+
+::: tip
+This app follows our [deployment guidelines](/pyharp/guidelines), against which we check every
+model we host. The steps below link the sections that apply.
+:::
 
 ## 1. Get the Code
 
@@ -33,10 +42,10 @@ The Space holds:
   license (`LICENSE`).
 - `README.md`, the configuration of the Space (see [Hosting Models](/hosting/spaces)).
 
-Copying the code that inference needs, rather than a whole research repository, keeps a Space small
-and quick to start, as
-[Lightweight Spaces](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#lightweight-spaces)
-describes.
+S-KEY is not on PyPI, so the Space carries a copy of its code, which the app calls rather than
+reimplements. Copying the code that inference needs, rather than a whole research repository, keeps
+a Space small and quick to start, as
+[Lightweight Spaces](/pyharp/guidelines#lightweight-spaces) describes.
 
 ## 2. Describe the Model
 
@@ -73,7 +82,7 @@ model_card = ModelCard(
   lists the model under `Analysis` on the Home tab. `SampleRate` and `Channels` declare the format
   in which the model works, which nothing can infer, `'domain:music'` is a custom tag naming the
   domain of the model, and the `input:` and `output:` tags are added for you, from the components
-  in step 5.
+  in step 5. [Model Card](/pyharp/guidelines#model-card) covers what each field should say.
 
 ## 3. Load the Model Once
 
@@ -89,9 +98,11 @@ if __name__ != "__main__":
     HCQT, CHROMANET, CROP_FN = load_model_components(CHECKPOINT, torch.device(DEVICE))
 ```
 
-PyHARP runs `process_fn` in a worker process, which imports `app.py` under the name `__mp_main__`.
-This condition loads the checkpoint and builds the model in the worker alone, once, as the app
-starts. The server process, which never runs `process_fn`, skips it.
+PyHARP runs `process_fn` in a worker process, so that the `Cancel` button in HARP can stop a job.
+The worker imports `app.py` under the name `__mp_main__`. This condition loads the checkpoint and
+builds the model in the worker alone, once, as the app starts. The server process, which never runs
+`process_fn`, skips it. [Worker Processes](/pyharp/guidelines#worker-processes) covers what the
+worker changes for an app.
 
 ## 4. Process a Request
 
@@ -142,7 +153,8 @@ def find_key(input_audio_path):
 ```
 
 - **`process_fn` checks the input first**, and raises `gr.Error` with a message the user can act
-  on, which HARP shows in its error popup.
+  on, which HARP shows in its error popup (see
+  [Error Reporting](/pyharp/guidelines#error-reporting)).
 - **`find_key` runs the model.** `@spaces.GPU` reserves a GPU for it on ZeroGPU, after the checks in
   `process_fn` have passed, and does nothing elsewhere.
 - **The result is a label.** A `LabelList` holds one `AudioLabel`, which spans the clip (`t` and
@@ -186,6 +198,10 @@ if __name__ == "__main__":
   HARP must fill, and `.set_info(...)` describes a component in HARP's instructions panel.
 - **`demo.queue()`** lets HARP cancel a job, and **`show_error=True`** forwards the reason a job
   failed.
+- **`ssr_mode=False`** turns off the server-side rendering of the Gradio page, which HARP does not
+  use, and which can crash a Space as it starts.
+  [Structure of app.py](/pyharp/guidelines#structure-of-apppy) lists everything HARP requires of
+  the components and of this line.
 
 ## 6. Run It in HARP
 

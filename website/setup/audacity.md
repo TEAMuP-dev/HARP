@@ -1,3 +1,7 @@
+---
+description: Move audio between Audacity and HARP by exporting a selection and dragging the result back.
+---
+
 # Audacity
 
 Audacity is an audio editor of its own, so audio moves between Audacity and HARP as files.

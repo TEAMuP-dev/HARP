@@ -1,3 +1,7 @@
+---
+description: The limits of HARP in processing, networking, media types, DAW support, and versions.
+---
+
 # Limitations
 
 Some limits of HARP follow from processing remotely, and others are features we have yet to build.

@@ -1,3 +1,7 @@
+---
+description: What HARP is, how it sends audio and MIDI from a DAW to machine learning models hosted remotely, and what those models can do.
+---
+
 # Overview
 
 ![HARP processing a region opened from a DAW session](/images/hero.png)
@@ -61,9 +65,11 @@ machine.
 - **[Using HARP](/download/)**: download HARP, set it up as a standalone application or with
   your DAW, and learn the interface and the hosted models.
 - **[Deploying Models with PyHARP](/pyharp/setup)**: run a model of your own in
-  HARP, through two examples taken from the models we host.
+  HARP, through two examples taken from the models we host, and the
+  [guidelines](/pyharp/guidelines) those models follow.
 - **[Hosting Models](/hosting/spaces)**: put a model on Hugging Face Spaces, or reach an
-  existing API.
+  existing API. We offer to host select models under the TEAMuP organization on Hugging Face and to
+  feature them on HARP's Home tab.
 - **[Contributing to HARP](/contributing/overview)**: build, debug, and extend the
   application.
 

@@ -1,3 +1,7 @@
+---
+description: Move audio between Cubase and HARP by bouncing an event to a file and dragging the result back.
+---
+
 # Cubase
 
 Cubase opens audio in no external editor other than WaveLab, so audio moves between Cubase and HARP
