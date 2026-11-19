@@ -190,6 +190,9 @@ def lint_space(api, space_id: str, overrides: dict, uv: str | None):
             result.status = PASS
     except Exception as exc:  # noqa: BLE001 - reported as the Space's failure
         result.error = f"could not read the Space: {describe_exception(exc)}"
+        # The Hub answers alike for a Space that is private and one that does not exist
+        if not api.token:
+            result.error += " | Set HF_TOKEN if the Space is private"
     finally:
         result.duration = round(time.time() - start, 1)
 

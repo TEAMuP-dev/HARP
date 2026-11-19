@@ -166,11 +166,11 @@ def get_token(required: bool) -> str:
 
 def has_write_access(info: dict, org: str) -> bool | None:
     """
-    Whether a token can write to the spaces of an organization.
+    Whether a token can write to the spaces of an organization or account.
 
     Args:
         info (dict): The `whoami` payload describing the token.
-        org (str): Organization the run will touch.
+        org (str): Organization or account the run will touch.
 
     Returns:
         allowed (bool | None): True or False when the token says plainly, and
@@ -202,7 +202,7 @@ def has_write_access(info: dict, org: str) -> bool | None:
     return None
 
 
-def check_token(token: str, org: str, need_write: bool) -> bool:
+def check_token(token: str, owners: list, need_write: bool) -> bool:
     """
     Confirm the token works and covers what the run will ask of it.
 
@@ -213,7 +213,8 @@ def check_token(token: str, org: str, need_write: bool) -> bool:
 
     Args:
         token (str): The Hugging Face access token.
-        org (str): Organization whose spaces the run will touch.
+        owners (list): Organizations and accounts whose spaces the run will
+            touch.
         need_write (bool): Whether the run may restart spaces.
 
     Returns:
@@ -235,9 +236,11 @@ def check_token(token: str, org: str, need_write: bool) -> bool:
     role = ((info.get("auth") or {}).get("accessToken") or {}).get("role", "unknown")
     print(f"Token accepted for {info.get('name', 'unknown')} (role: {role})")
 
-    if need_write and has_write_access(info, org) is False:
+    locked = [o for o in owners if need_write and has_write_access(info, o) is False]
+
+    if locked:
         print(
-            f"WARNING: this token cannot restart spaces in {org}, so a crashed "
+            f"WARNING: this token cannot restart spaces in {', '.join(locked)}, so a crashed "
             f"or stopped space will be reported rather than recovered. Pass "
             f"--no-restart-failed to skip the attempt.",
             file=sys.stderr,
