@@ -3,15 +3,18 @@
 Guidelines for deploying a model into the HARP ecosystem as a Hugging Face Space. These are the
 conventions the featured models under [`teamup-tech`](https://huggingface.co/teamup-tech/spaces)
 follow, and the shape any deployment should take.
-[PyHARP's README](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md) documents how to
+[PyHARP's README](https://github.com/TEAMuP-dev/pyharp/blob/main/README.md) documents how to
 build an app, and this document covers what to decide while doing it.
 
-The [validation harness](../model_validation/README.md) checks every Space against these
-guidelines daily. Its lint tier reads each Space's files for the rules stated here, and its spaces
-tier runs each Space to check what it returns and what it refuses.
+The
+[validation harness](https://github.com/TEAMuP-dev/HARP/blob/main/model_validation/README.md)
+checks every Space against these guidelines daily. Its lint tier reads each Space's files for the
+rules stated here, and its spaces tier runs each Space to check what it returns and what it
+refuses.
 
-Hugging Face can change its platform with little notice, and [Hugging Face
-Changes](HUGGINGFACE.md) logs several changes that broke our Spaces.
+Hugging Face can change its platform with little notice, and
+[Hugging Face Changes](https://github.com/TEAMuP-dev/HARP/blob/main/docs/HUGGINGFACE.md) logs
+several changes that broke our Spaces.
 
 ## Table of Contents
 
@@ -121,7 +124,7 @@ Link the paper and the original repository.
 ### Tags
 
 HARP's Home tab categorizes and searches by the tags of a model. PyHARP's
-[Tags](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#tags) section documents the kinds
+[Tags](https://github.com/TEAMuP-dev/pyharp/blob/main/README.md#tags) section documents the kinds
 and lists the taxonomy. The conventions:
 
 - **Place the model in the taxonomy with `Category` and `Subcategory`**, listing the most specific
@@ -257,7 +260,7 @@ category from a newer taxonomy shows as a custom tag on an older HARP.
 ## Structure of app.py
 
 Follow the layout in
-[PyHARP's README](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md), in this order:
+[PyHARP's README](https://github.com/TEAMuP-dev/pyharp/blob/main/README.md), in this order:
 
 1. Imports
 2. `ModelCard`
@@ -298,7 +301,7 @@ PyHARP runs `process_fn` in a separate worker process, so that the `Cancel` butt
 work rather than leaving it to finish on the Space. The worker reaches `process_fn` by importing
 `app.py`, which runs everything at module scope a second time. That is why step 5 above puts the
 Gradio code behind `if __name__ == "__main__":`, with `process_fn` defined above it. PyHARP's
-[Worker Processes](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#worker-processes)
+[Worker Processes](https://github.com/TEAMuP-dev/pyharp/blob/main/README.md#worker-processes)
 section covers what this asks of `process_fn`. What it changes for a deployment:
 
 - **Load the model in the worker alone.** Module scope runs in both processes, but only the worker
@@ -375,7 +378,7 @@ at both.
 matters most in its media clipboard, where results from many runs and models sit side by side. A
 name like `tmp3kx9q.wav` or `output.wav` is soon lost among them. PyHARP renames every file
 `process_fn` returns as `<model>_<output>`, from the name on the model card and the label of the output (see
-[Output File Names](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#output-file-names)).
+[Output File Names](https://github.com/TEAMuP-dev/pyharp/blob/main/README.md#output-file-names)).
 The label is the part a Space chooses, so make it say what the result is: "Vocals", "Accompaniment",
 or "Restored Audio", never "Output Audio" or "Result". Return each result as a file rather than as
 an array, and a `gr.Audio` result in the `format` it declares, since Gradio names any audio it has
@@ -389,12 +392,12 @@ alongside the labels, as Beat-This and S-KEY do, and a whole-clip result such as
 a loudness reading becomes a label spanning the clip.
 
 PyHARP's README covers the rest of the interface:
-[Gradio Endpoint](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#gradio-endpoint)
+[Gradio Endpoint](https://github.com/TEAMuP-dev/pyharp/blob/main/README.md#gradio-endpoint)
 lists the components HARP supports as controls and documents marking an input optional with
 `.harp_required(False)`,
-[MIDI Inputs & Outputs](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#midi-inputs--outputs)
+[MIDI Inputs & Outputs](https://github.com/TEAMuP-dev/pyharp/blob/main/README.md#midi-inputs--outputs)
 covers MIDI tracks, and
-[Output Labels](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#output-labels)
+[Output Labels](https://github.com/TEAMuP-dev/pyharp/blob/main/README.md#output-labels)
 covers displaying labels over a track.
 
 ## Model Weights
@@ -530,7 +533,7 @@ Reasonable only for small assets, roughly under 50 MB, with no home of their own
 then versioned with the Space itself. The Hub rejects binary files pushed directly to Git, and
 `.gitattributes` has to be in place **before** the file is staged. PyHARP's README covers the
 failure modes in its
-[Binary Files](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#binary-files) section.
+[Binary Files](https://github.com/TEAMuP-dev/pyharp/blob/main/README.md#binary-files) section.
 
 ### Persistent Storage
 
@@ -781,8 +784,8 @@ account at all, and HARP opens it by its URL.
 
 On a paid plan, the `cpu-basic` hardware, with 2 vCPUs and 16 GB of memory, runs at no cost, and
 sleeps after 48 hours without a request. Upgraded hardware is billed by the minute while the Space
-runs. A ZeroGPU allowance resets 24 hours after its first use. The
-[pricing page](https://huggingface.co/pricing) of Hugging Face has the current terms.
+runs. A ZeroGPU allowance resets 24 hours after its first use. Hugging Face's
+[pricing page](https://huggingface.co/pricing) has the current terms.
 <!-- #endregion hugging-face-plans -->
 
 Decide by measurement. Time a warm request with 10 seconds of input on `cpu-basic`, which the
@@ -920,7 +923,7 @@ Keep the two apart rather than patching the source of the model. A **frontend** 
 and PyHARP, a **backend** environment runs the model under its own interpreter and pins, and the
 frontend invokes the backend as a subprocess, exchanging JSON. Both live in one Docker image, which
 a Gradio Space cannot express, so the Space uses the Docker SDK. PyHARP's
-[Docker Spaces](https://github.com/TEAMuP-dev/pyharp/blob/develop/README.md#docker-spaces) section
+[Docker Spaces](https://github.com/TEAMuP-dev/pyharp/blob/main/README.md#docker-spaces) section
 has the layout, and [BeatNet](https://huggingface.co/spaces/teamup-tech/BeatNet) is a working
 example.
 

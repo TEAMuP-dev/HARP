@@ -1,3 +1,7 @@
+---
+description: Move audio between Adobe Audition and HARP by saving a selection to a file and dragging the result back.
+---
+
 # Adobe Audition
 
 Audition is an audio editor of its own, so audio moves between Audition and HARP as files.

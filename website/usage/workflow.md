@@ -1,3 +1,7 @@
+---
+description: A walkthrough of the HARP interface, from the Home tab and model tabs to tracks, the media clipboard, and settings.
+---
+
 # Walkthrough
 
 This page describes HARP's interface. The welcome tutorial, under `Help > Welcome Tutorial`, covers

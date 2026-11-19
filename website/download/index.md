@@ -1,3 +1,7 @@
+---
+description: Download HARP for macOS, Windows, or Linux, and install, update, or uninstall it.
+---
+
 <script setup>
 import { data as release } from './release.data.mjs'
 </script>
@@ -70,3 +74,20 @@ its own or with your DAW.
 To update HARP, install a newer release over the old one. Settings, API keys, and custom model paths
 live in a settings file of their own, which `File > Settings > General > Open Settings File`
 reveals, and carry over from one version to the next.
+
+## Uninstalling
+
+HARP has no installer. To uninstall it, delete the application, and delete the folders below to
+remove its settings and its log as well:
+
+- **macOS**: delete `HARP.app` from `Applications`. The settings and the cached list of models are
+  in `~/Library/Application Support/HARP/`, and the log is in `~/Library/Logs/HARP/`.
+- **Windows**: delete `HARP.exe`. The settings, the cached list of models, and the log are in
+  `%APPDATA%\HARP\`.
+- **Linux**: delete the `HARP` executable. The settings, the cached list of models, and the log are
+  in `~/.config/HARP/`. HARP 4.0.0 kept the settings and the cached list of models in `~/HARP/`
+  instead, and later versions move them to `~/.config/HARP/`.
+
+API keys are stored in the settings file, so deleting it removes them. Results are downloaded to
+the temporary directory of the system. A DAW that was set up to open HARP as its external editor
+keeps that setting until it is changed in the DAW.

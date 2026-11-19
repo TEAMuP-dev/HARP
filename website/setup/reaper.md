@@ -1,3 +1,7 @@
+---
+description: Set HARP as an external editor in REAPER, open an item in a model, and send the result back to the project.
+---
+
 # REAPER
 
 REAPER opens items in HARP as an external editor.

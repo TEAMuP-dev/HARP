@@ -1,3 +1,7 @@
+---
+description: Set HARP as Logic Pro's external sample editor, open a region in a model, and send the result back to the project.
+---
+
 # Logic Pro
 
 Logic Pro opens regions in HARP as an external sample editor.

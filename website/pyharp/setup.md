@@ -1,9 +1,19 @@
+---
+description: Install PyHARP, run an example app, open it in HARP, and learn how HARP reads the interface of a Gradio app.
+---
+
 # Setting Up PyHARP
 
 HARP can load any [Gradio](https://www.gradio.app) app that follows a few conventions, and
 [PyHARP](https://github.com/TEAMuP-dev/pyharp) is the Python library that applies them. This page
 installs PyHARP, runs one of its examples, and opens the example in HARP, then describes how HARP
 and an app communicate.
+
+::: tip
+Our [deployment guidelines](/pyharp/guidelines) state the conventions that every model we host
+follows, and what to decide while building an app: licensing, the model card, weights, error
+reporting, the format of results, and hardware.
+:::
 
 ## Install
 
@@ -70,16 +80,17 @@ week, or until the app stops. Open the local URL in a browser to try the app on 
 
 ## Open It in HARP
 
-1. On the `Home` tab of HARP, click `Custom Path...`.
+1. On HARP's `Home` tab, click `Custom Path...`.
 2. Enter the local URL, _e.g._, `http://localhost:7860`, and click `Load`. The model opens in a tab
    of its own, and keeps a card on the Home tab.
 3. Drag a MIDI file onto the `Input MIDI` track, and select `Process`. The rendered audio appears
-   in the `Synthesized Audio` track.
+   in the `Synthesized Audio` track. The `Soundfont` file picker is optional, and takes a `.sf2` or
+   `.sf3` file to render with in place of MuseScore General.
 
 ![The MIDI synthesizer in HARP, after rendering a MIDI file](/images/example-in-harp.png)
 
 HARP reads the interface of an app when it loads the model, so after changing a component, close
-the tab of the model and open it again from its card. Stop the app with `Ctrl+C`.
+the model tab and open it again from its card. Stop the app with `Ctrl+C`.
 
 ## How It Works
 
@@ -116,14 +127,16 @@ Each Gradio component becomes part of the model tab in HARP:
 - `gr.JSON`, returning a `LabelList`, shows labels over an output track.
 
 The PyHARP [README](https://github.com/TEAMuP-dev/pyharp#readme) documents the library in full,
-and our [deployment guidelines](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md)
-describe the conventions the models we host follow.
+and our [deployment guidelines](/pyharp/guidelines) describe the conventions the models we host
+follow.
 
 ## Next Steps
 
-- [Example 1](/pyharp/example_skey) walks through a small model that detects the key
-  of a song.
-- [Example 2](/pyharp/example_demucs) walks through a larger one that separates stems
-  on a GPU.
+- [Example 1](/pyharp/example_skey) builds an app from scratch around a small model that detects
+  the key of a song.
+- [Example 2](/pyharp/example_demucs) builds one around a larger model that separates stems on a
+  GPU.
+- [Deployment Guidelines](/pyharp/guidelines) states the conventions of the models we host, which
+  a model has to follow to be featured on HARP's Home tab.
 - [Hosting Models](/hosting/spaces) puts an app online, so that it runs independently of
   your machine.

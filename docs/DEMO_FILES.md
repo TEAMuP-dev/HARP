@@ -1,6 +1,6 @@
 # Demo Files
 
-The demo files are short inputs for trying the models on the Home tab of HARP. They are packaged
+The demo files are short inputs for trying the models on HARP's Home tab. They are packaged
 as `HARP-demo-files.zip`, an asset of the
 [4.0.0 release](https://github.com/TEAMuP-dev/HARP/releases/tag/v4.0.0) linked from the
 [download page](https://harp.tools/download/), and this file is the README inside the package.

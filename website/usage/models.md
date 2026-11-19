@@ -1,3 +1,7 @@
+---
+description: Run a hosted model in HARP, and learn what the badges on a model card, API keys, and sleeping Spaces mean.
+---
+
 # Using Hosted Models
 
 The models on HARP's Home tab are hosted by us, as Hugging Face Spaces of the
@@ -28,7 +32,7 @@ everything else. It runs on a GPU through ZeroGPU, which allocates one to each r
 
 ![Demucs after separating a song into four stems](/images/demucs-stems.png)
 
-[Example 2](/pyharp/example_demucs) walks through the code of this model.
+[Example 2](/pyharp/example_demucs) builds the app behind this model from scratch.
 
 ## Badges
 
@@ -65,7 +69,7 @@ started, which takes a minute or two, HARP reports that it is still starting and
 `Try again`. Open the model again once that time has passed.
 
 When a request fails, HARP reports the cause in a popup, with the actions that apply: adding an API
-key, opening the page of the model to check its status, opening the log, or reporting the problem
+key, opening the model page to check its status, opening the log, or reporting the problem
 through a prefilled GitHub issue. A quota error clears once the allowance resets, or immediately
 with a key.
 
@@ -113,8 +117,9 @@ HARP's Home tab lists every model we host, by category. Notable models include t
 **Synthesis**
 
 - [MIDI Synthesizer](https://huggingface.co/spaces/teamup-tech/MIDI-Synthesizer) renders MIDI with
-  a General MIDI soundfont, and [DDSP-Piano](https://huggingface.co/spaces/teamup-tech/DDSP-Piano)
-  and [DDSP-Guitar](https://huggingface.co/spaces/teamup-tech/DDSP-Guitar) render it with expressive
+  a General MIDI soundfont or one of your own, and
+  [DDSP-Piano](https://huggingface.co/spaces/teamup-tech/DDSP-Piano) and
+  [DDSP-Guitar](https://huggingface.co/spaces/teamup-tech/DDSP-Guitar) render it with expressive
   instrument models.
 - [Kokoro](https://huggingface.co/spaces/teamup-tech/Kokoro) synthesizes speech from text, and
   [OmniVoice](https://huggingface.co/spaces/teamup-tech/OmniVoice) synthesizes it in the voice of a

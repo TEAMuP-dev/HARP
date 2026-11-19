@@ -1,3 +1,7 @@
+---
+description: Use HARP on its own to process audio and MIDI files with hosted machine learning models.
+---
+
 # Standalone
 
 On its own, HARP is an editor for audio and MIDI files.
