@@ -973,51 +973,6 @@ several entries sharing a key and discards the rest in silence, so a model
 configured in two places would run with only the settings written under the
 second entry.
 
-## Layout
-
-[validate_models.py](src/validate_models.py) is the entry point, and most of
-the modules behind it are grouped into four packages. Imports are absolute
-from `src/`, as in `from endpoint.harness import run_endpoint_tests`.
-
-```
-model_validation/src/
-├── validate_models.py     command-line entry point
-├── utils.py               credentials, configuration, discovery, and timeouts
-├── results.py             result records and reports
-├── quota.py               ZeroGPU usage tracking
-├── tiers/                 one driver per tier
-│   ├── __init__.py
-│   ├── examples.py
-│   ├── spaces.py
-│   └── lint.py
-├── endpoint/              checks of a running app
-│   ├── __init__.py
-│   ├── harness.py
-│   ├── cases.py
-│   ├── expectations.py
-│   ├── validators.py
-│   └── refusals.py
-├── media/                 synthesized inputs and output decoding
-│   ├── __init__.py
-│   ├── assets.py
-│   ├── audio.py
-│   └── midi.py
-└── rules/                 what the lint tier checks
-    ├── __init__.py
-    ├── base.py
-    ├── app.py
-    └── requirements.py
-```
-
-- `tiers/` drives each tier: a local pyharp example, a remote Space, and the
-  lint of the files of a Space.
-- `endpoint/` checks a running app for the examples and spaces tiers alike: its
-  endpoints, its test cases, their `expect` rules and validators, and refusals.
-- `media/` synthesizes the input files of a run and decodes the audio and MIDI
-  a model returns.
-- `rules/` holds the rules of the lint tier, on the app file of a Space and on
-  what it installs.
-
 ## CI Behavior
 
 - **Schedule:** daily at 04:45 UTC. It can also be run manually from the
