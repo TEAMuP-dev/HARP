@@ -131,10 +131,10 @@ follow.
 
 ## Next Steps
 
-- [Example 1](/pyharp/example_skey) walks through a small model that detects the key
-  of a song.
-- [Example 2](/pyharp/example_demucs) walks through a larger one that separates stems
-  on a GPU.
+- [Example 1](/pyharp/example_skey) builds an app from scratch around a small model that detects
+  the key of a song.
+- [Example 2](/pyharp/example_demucs) builds one around a larger model that separates stems on a
+  GPU.
 - [Deployment Guidelines](/pyharp/guidelines) states the conventions of the models we host, which
   a model has to follow to be featured on HARP's Home tab.
 - [Hosting Models](/hosting/spaces) puts an app online, so that it runs independently of

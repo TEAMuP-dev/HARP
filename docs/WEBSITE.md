@@ -63,8 +63,9 @@ pnpm run docs:dev        # Serves the site at http://localhost:5173, reloading o
 - **`website/scripts/check-includes.mjs`** runs before every build, and fails it if an include
   names a file or region that does not exist. VitePress would otherwise include the whole file in
   place of a missing region.
-- **The two examples** under `website/pyharp/` quote the code of the S-KEY and Demucs Spaces
-  at pinned revisions. Update the revision and the quoted lines together.
+- **The two examples** under `website/pyharp/` build the S-KEY and Demucs apps from scratch. The
+  code blocks of each page, joined in order, are the `requirements.txt` and `app.py` of the Space
+  at a pinned revision, so update the revision and the blocks together.
 - **The download page** links the packages that the release workflow attaches to the GitHub release
   named by the root `VERSION`. `website/download/release.data.mjs` builds the links when the
   site is built, and the `DownloadButtons` component of the theme shows them, with the platform of

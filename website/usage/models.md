@@ -32,7 +32,7 @@ everything else. It runs on a GPU through ZeroGPU, which allocates one to each r
 
 ![Demucs after separating a song into four stems](/images/demucs-stems.png)
 
-[Example 2](/pyharp/example_demucs) walks through the code of this model.
+[Example 2](/pyharp/example_demucs) builds the app behind this model from scratch.
 
 ## Badges
 

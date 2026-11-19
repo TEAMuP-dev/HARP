@@ -27,7 +27,7 @@ one belongs on ZeroGPU, which accelerates PyTorch alone.
 
 ## Deploying Example 2
 
-The app from [Example 2](/pyharp/example_demucs) is ready for ZeroGPU, so a free
+The app you built in [Example 2](/pyharp/example_demucs) is ready for ZeroGPU, so a free
 account can host it too.
 
 1. **Create the Space.** On [huggingface.co/new-space](https://huggingface.co/new-space), choose a
@@ -36,15 +36,18 @@ account can host it too.
 
    ![Creating a Space with the Gradio SDK on ZeroGPU hardware](/images/space-create.png)
 
-2. **Add the app.** Clone the Space, and copy `app.py`, `requirements.txt`, and `README.md` from
-   Example 2 into it, replacing the generated `README.md`:
+2. **Add the app.** Clone the Space, and copy `app.py` and `requirements.txt` from your Example 2
+   folder into it:
 
    ```bash
    git clone https://huggingface.co/spaces/<USERNAME>/demucs demucs-space
-   cp demucs/app.py demucs/requirements.txt demucs/README.md demucs-space/
+   cp demucs/app.py demucs/requirements.txt demucs-space/
    ```
 
-3. **Push.** Git asks for your username and, as the password, an
+3. **Configure the Space.** Replace the contents of the `README.md` that Hugging Face generated
+   with the block under [Space Configuration](#space-configuration) below.
+
+4. **Push.** Git asks for your username and, as the password, an
    [access token](https://huggingface.co/settings/tokens) with `Write` permission:
 
    ```bash
@@ -54,7 +57,7 @@ account can host it too.
    git push
    ```
 
-4. **Watch it build.** The page of the Space shows its status, and its `Logs` panel has two tabs.
+5. **Watch it build.** The page of the Space shows its status, and its `Logs` panel has two tabs.
    The `Build` tab shows pip installing the requirements, which takes five to ten minutes. The
    `Container` tab then shows `app.py` starting and downloading the weights, and ends with
    `Running on local URL`. An error at startup appears there, as does the traceback when HARP
@@ -62,11 +65,13 @@ account can host it too.
 
    ![The page of a Space, with its logs open](/images/space-logs.png)
 
-5. **Open it in HARP.** On the `Home` tab, click `Custom Path...`, enter `<USERNAME>/demucs`, and
+6. **Open it in HARP.** On the `Home` tab, click `Custom Path...`, enter `<USERNAME>/demucs`, and
    click `Load`. The model keeps a card on the `Home` tab until the X button on that card removes
    it.
 
-The YAML at the top of `README.md` configures the Space:
+### Space Configuration
+
+The YAML at the top of `README.md` configures the Space. This is the block for step 3:
 
 ```yaml
 ---
@@ -84,6 +89,7 @@ short_description: Demucs four-stem music source separation
 tags:
   - category:separation
   - subcategory:stem-separation
+  - domain:music
   - input:audio
   - output:audio
   - sample-rate:44100
