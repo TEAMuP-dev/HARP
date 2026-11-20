@@ -1,3 +1,7 @@
+---
+description: Move audio between Pro Tools and HARP by exporting clips as files and dragging the results back.
+---
+
 # Pro Tools
 
 Pro Tools has no external editor setting, so audio moves between Pro Tools and HARP as files.

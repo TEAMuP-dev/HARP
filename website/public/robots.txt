@@ -1,0 +1,5 @@
+# Every page is open to crawlers, and the sitemap, which VitePress writes at build time, lists them.
+User-agent: *
+Allow: /
+
+Sitemap: https://harp.tools/sitemap.xml

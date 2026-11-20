@@ -1,7 +1,7 @@
 /**
  * @file TutorialTargets.h
  * @brief Parts of the interface the tutorial can point at, and how it finds them.
- * @author cwitkowitz, saumya-pailwan
+ * @author TEAMuP
  *
  * A component is marked for the tutorial by giving it one of these IDs (e.g.,
  * processButton.setComponentID(TutorialTargets::processButton)). The tutorial then finds
@@ -29,6 +29,8 @@ inline constexpr const char* processButton = "tutorial.processButton";
 inline constexpr const char* statusArea = "tutorial.statusArea";
 inline constexpr const char* clipboard = "tutorial.clipboard";
 inline constexpr const char* clipboardControls = "tutorial.clipboardControls";
+// Not something a step points at. A popup is left undimmed whichever step is showing.
+inline constexpr const char* popup = "tutorial.popup";
 
 /**
  * Something for the tutorial to highlight: the first showing component with an ID,

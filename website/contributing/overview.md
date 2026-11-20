@@ -1,3 +1,7 @@
+---
+description: Build, debug, and release HARP, a JUCE application in C++20, and find the guidelines for contributors.
+---
+
 # Building and Releasing HARP
 
 HARP is part of a collaborative research project funded by
@@ -9,8 +13,8 @@ repositories.
 There are three ways to contribute:
 
 - **A model for others to use.** [Deploying Models with PyHARP](/pyharp/setup) ends
-  in a hosted app that any user of HARP can open by its path. If you would like to have your model
-  featured on the Home tab, please contact us.
+  in a hosted app that any user of HARP can open by its path. We offer to host select models under
+  the TEAMuP organization on Hugging Face and to feature them on HARP's Home tab.
 - **A change to the application.** This page covers building, debugging, and releasing HARP.
 - **Support for a new service.** A service with an API of its own is reached through a client class
   of its own, as [Adding an API Provider](/contributing/add_provider) describes.
@@ -25,8 +29,7 @@ Reports of bugs and requests for features are welcome as
   conventions, error handling, logging, and layout.
 - [Reviewing](https://github.com/TEAMuP-dev/HARP/blob/main/docs/REVIEWING.md): what a pull request
   needs, and how to review one. Every pull request needs two approvals.
-- [Deployment](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md): the conventions
-  of the models we host.
+- [Deployment](/pyharp/guidelines): the conventions of the models we host.
 - [Code Signing](https://github.com/TEAMuP-dev/HARP/blob/main/docs/SIGNING.md): signing and
   notarizing the release packages.
 - [Website](https://github.com/TEAMuP-dev/HARP/blob/main/docs/WEBSITE.md): building and editing
@@ -75,7 +78,7 @@ before starting one under the debugger.
 
 To release a version, update `VERSION` and `RELEASE.md`, name the PyHARP it pairs with in the root
 `README.md`, which [Setting Up PyHARP](/pyharp/setup#versions) includes, and push a tag
-such as `v4.0.0`. The [download page](/download/) builds its download links from `VERSION`,
+such as `v4.1.0`. The [download page](/download/) builds its download links from `VERSION`,
 so they lead to the packages of the new release once the workflow publishes them. The demo files it
 links are an asset of the 4.0.0 release, and
 [Demo Files](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEMO_FILES.md) lists their contents

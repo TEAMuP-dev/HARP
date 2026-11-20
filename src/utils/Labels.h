@@ -1,7 +1,7 @@
 /**
  * @file Labels.h
  * @brief Defines data structures for various types of labels.
- * @author cwitkowitz, xribene
+ * @author TEAMuP
  */
 
 #pragma once
@@ -29,12 +29,6 @@ struct AudioLabel : public OutputLabel
 {
     // Additional fields
     std::optional<float> amplitude;
-};
-
-struct SpectrogramLabel : public OutputLabel
-{
-    // Additional fields
-    std::optional<float> frequency;
 };
 
 struct MidiLabel : public OutputLabel

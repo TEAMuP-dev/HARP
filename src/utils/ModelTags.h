@@ -1,7 +1,7 @@
 /**
  * @file ModelTags.h
  * @brief Model taxonomy and parsing of the tags models declare about themselves.
- * @author cwitkowitz
+ * @author TEAMuP
  *
  * Tags are plain strings, read from a Space's README metadata when browsing models and
  * from the model card once a model is loaded. Structured tags take the form

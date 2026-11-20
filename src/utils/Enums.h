@@ -1,7 +1,7 @@
 /**
  * @file Enums.h
  * @brief Simple helper functions for enums.
- * @author cwitkowitz, huiranyu
+ * @author TEAMuP
  */
 
 #pragma once

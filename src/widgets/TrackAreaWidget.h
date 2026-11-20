@@ -1,7 +1,7 @@
 /**
  * @file TrackAreaWidget.h
  * @brief Component that displays a group of tracks in the GUI.
- * @author cwitkowitz, NatalieElizabeth, xribene
+ * @author TEAMuP
  */
 
 #pragma once
@@ -333,7 +333,7 @@ public:
     {
         for (auto& m : mediaDisplays)
         {
-            m->setChooseFileButtonEnabled(enabled);
+            m->setFileLoadingEnabled(enabled);
         }
     }
 

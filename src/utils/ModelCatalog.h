@@ -1,7 +1,7 @@
 /**
  * @file ModelCatalog.h
  * @brief The models HARP offers for browsing on the Home tab.
- * @author cwitkowitz
+ * @author TEAMuP
  *
  * The catalog combines the models whose controls ship with HARP (Stability AI), every
  * Space of the HARP organization on Hugging Face, and any other paths the user has loaded
@@ -123,6 +123,10 @@ public:
 
     // Settings key under which the custom paths are saved
     static constexpr const char* customPathsKey = "models.customPaths";
+
+    // Files kept beside the settings file, holding the last listing and the cards of loaded models
+    static constexpr const char* listingFileName = "model_catalog.json";
+    static constexpr const char* cardsFileName = "model_cards.json";
 
     enum class FetchState
     {
@@ -612,8 +616,8 @@ private:
         return {};
     }
 
-    static File getListingFile() { return getCacheFile("model_catalog.json"); }
-    static File getCardsFile() { return getCacheFile("model_cards.json"); }
+    static File getListingFile() { return getCacheFile(listingFileName); }
+    static File getCardsFile() { return getCacheFile(cardsFileName); }
 
     void loadCachedListing()
     {

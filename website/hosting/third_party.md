@@ -1,3 +1,7 @@
+---
+description: Reach a model behind a third-party API, or on another Space, from HARP, through a PyHARP app or a provider built into HARP.
+---
+
 # Using Third-Party APIs
 
 Some models are closed-source and offered only through an API, such as a commercial service, and
@@ -30,7 +34,7 @@ import requests
 
 API_URL = "https://api.example.com/v1/process"
 
-# A secret of the Space, which reaches the app as an environment variable. Never commit a key.
+# A Space secret, which reaches the app as an environment variable. Never commit a key.
 API_KEY = os.environ["EXAMPLE_API_KEY"]
 
 
@@ -90,8 +94,8 @@ def process_fn(input_audio_path: str) -> str:
 
 Prefer hosting the model yourself wherever its license and its hardware allow, since the owners of
 the other Space can change its API, or take it down, without notice.
-[Calling Another Space](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#calling-another-space)
-covers the cases where it is the right choice, and what such an app owes HARP.
+[Calling Another Space](/pyharp/guidelines#calling-another-space) covers the cases where it is the
+right choice, and what such an app owes HARP.
 
 ## Adding a Provider
 

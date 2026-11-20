@@ -1,9 +1,41 @@
 import { defineConfig } from 'vitepress'
 
+// The address of the site, which the sitemap, the canonical links, and the link previews share
+const hostname = 'https://harp.tools'
+
+// The description of any page that does not give one of its own in its frontmatter
+const description = 'Machine learning models for audio and MIDI, run remotely from your DAW.'
+
+// Gives a heading the anchor that GitHub gives it, so that a link to a heading within text
+// included from README.md or docs/ works in both places. GitHub drops punctuation, where
+// VitePress would turn it into hyphens. As in VitePress, an underscore goes before a leading
+// digit, which keeps the anchor a valid CSS selector.
+const slugify = (heading) =>
+  heading
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{M}\p{Nd}\p{Pc}\- ]/gu, '')
+    .replace(/ /g, '-')
+    .replace(/^(\d)/, '_$1')
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "HARP",
-  description: "Machine learning models for audio and MIDI, run remotely from your DAW.",
+  description,
+
+  // Links and the sitemap name each page without its .html extension, a form in which Netlify
+  // serves it. The address with the extension loads as well, and the links in released versions
+  // of HARP use it.
+  cleanUrls: true,
+
+  // What a link to the site shows where it is shared. Each page adds its own title, description,
+  // and address in transformPageData below.
+  head: [
+    ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { property: 'og:site_name', content: 'HARP' }],
+    ['meta', { property: 'og:image', content: `${hostname}/images/hero.png` }],
+    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+  ],
 
   ignoreDeadLinks: [
     // ignore all localhost links
@@ -15,12 +47,30 @@ export default defineConfig({
   ],
 
   markdown: {
-    lineNumbers: true
+    lineNumbers: true,
+    anchor: { slugify }
   },
 
   sitemap: {
-    hostname: 'https://harp.tools',
+    hostname,
     lastmodDateOnly: false
+  },
+
+  // Names one address for each page as its canonical one, since Netlify serves a page both with
+  // and without its .html extension, and gives link previews the title and description of the
+  // page. The addresses match those of the sitemap.
+  transformPageData(pageData) {
+    const url = `${hostname}/${pageData.relativePath}`
+      .replace(/index\.md$/, '')
+      .replace(/\.md$/, '')
+
+    pageData.frontmatter.head ??= []
+    pageData.frontmatter.head.push(
+      ['link', { rel: 'canonical', href: url }],
+      ['meta', { property: 'og:url', content: url }],
+      ['meta', { property: 'og:title', content: pageData.title || 'HARP' }],
+      ['meta', { property: 'og:description', content: pageData.description || description }],
+    )
   },
 
   themeConfig: {
@@ -89,6 +139,7 @@ export default defineConfig({
           { text: 'Setting Up PyHARP', link: '/pyharp/setup' },
           { text: 'Example 1: Key Detection', link: '/pyharp/example_skey' },
           { text: 'Example 2: Stem Separation', link: '/pyharp/example_demucs' },
+          { text: 'Deployment Guidelines', link: '/pyharp/guidelines' },
         ]
       },
       {

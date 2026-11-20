@@ -1,7 +1,8 @@
 name: Runtime error report
 description: Report an error that HARP showed while loading or running a model
 title: "HARP runtime error report"
-labels: ["bug"]
+# HARP offers this form only for the models it features (see ModelTab::openErrorPopup)
+labels: ["Category/Models"]
 body:
   - type: markdown
     attributes:

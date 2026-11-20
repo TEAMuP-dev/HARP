@@ -1,0 +1,33 @@
+# Checks that the C++ and Python of the repository are formatted and pass the linter, with the
+# tool versions pinned in .pre-commit-config.yaml. See docs/DEVELOPING.md.
+
+name: Lint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Format and lint
+    # Pull requests from branches of this repository are already checked on push
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Run the pre-commit hooks on every file
+        run: pipx run pre-commit run --all-files --show-diff-on-failure --color always

@@ -66,9 +66,15 @@ the `HF_TOKEN` environment variable.
 
 A spaces run checks the token once before it starts. A rejected token stops
 the run with exit code `2`, rather than failing every space in turn. A token
-that is valid but cannot restart spaces in the organization draws a warning,
-since only the restart of a crashed space needs write access. The run then
-continues, reporting crashed spaces instead of attempting to recover them.
+that is valid but cannot restart the spaces the run touches draws a warning
+that names their owners, since only the restart of a crashed space needs write
+access. The run then continues, reporting crashed spaces instead of attempting
+to recover them.
+
+A lint of named Spaces (`--lint --spaces ...`) is the one run on Hugging Face
+that goes ahead without a token, since it only reads and anyone can read a
+public Space. A lint of the whole organization still needs the token, so that a
+missing one stops the run instead of leaving the private Spaces out.
 
 ## Running Locally
 
@@ -117,6 +123,14 @@ name for you, so `pitch_shifter` means `teamup-tech/pitch_shifter` for
 `--local-examples`. Write `<owner>/<name>` on `--spaces` to reach another
 organization, or give `--local-examples` a path to an example kept outside
 `pyharp/examples/`.
+
+**A deployment of your own.** Those two forms are all it takes to check a model
+that is not ours, and
+[Checking a Deployment](../docs/DEPLOYMENT.md#checking-a-deployment) in the
+deployment guide gives the three commands. Such a model gets the common test
+cases. For cases of its own, copy [config.yml](config.yml), keep
+`common_test_cases` and `synthesized_inputs`, replace `overrides` with an entry
+for the model, and pass the copy with `--config`.
 
 ## Selecting Models
 
@@ -385,7 +399,8 @@ and a server disconnect. None of these has an expected duration to wait out,
 which is why they are bounded by a retry count rather than by a deadline, and
 the retry usually surfaces the real behavior of the model.
 
-This list is `TRANSIENT_MARKERS` in [src/harness.py](src/harness.py), and it
+This list is `TRANSIENT_MARKERS` in
+[src/endpoint/harness.py](src/endpoint/harness.py), and it
 is deliberately narrow. A retried `/process` call reserves ZeroGPU allowance
 again, so a marker that also fires on a genuine failure multiplies what that
 failure costs and delays the real error. It is why a dropped connection is not
@@ -718,9 +733,9 @@ own length in seconds. `min_notes` counts note-on events.
 
 #### Custom Validators
 
-Registered in [validators.py](src/validators.py) and referenced by name, with
-the parameters of each validator nested beneath it so they stay separate from
-the fields of the test case. A case may run several:
+Registered in [validators.py](src/endpoint/validators.py) and referenced by
+name, with the parameters of each validator nested beneath it so they stay
+separate from the fields of the test case. A case may run several:
 
 ```yaml
       - name: labels-line-up
@@ -779,8 +794,9 @@ python -m unittest discover -s model_validation/tests -v
 
 These need no token and no network.
 
-Add custom validators to [validators.py](src/validators.py), registered with the `@validator` decorator
-under the name test cases will reference:
+Add custom validators to [validators.py](src/endpoint/validators.py),
+registered with the `@validator` decorator under the name test cases will
+reference:
 
 ```python
 @validator("labels_sorted")
@@ -795,8 +811,9 @@ def labels_sorted(outputs, controls, params):
 
 Before writing one, check whether an `expect` rule would do. If the check is a
 generally useful property of a single output, consider adding it to the
-`expect` vocabulary (`EXPECT_RULES` in [expectations.py](src/expectations.py)) instead of
-putting it in a one-off validator.
+`expect` vocabulary (`EXPECT_RULES` in
+[expectations.py](src/endpoint/expectations.py)) instead of putting it in a
+one-off validator.
 
 ### 4. Reuse a Case
 
@@ -910,10 +927,10 @@ The case fails when `/process`
 
 Telling a `gr.Error` from any other exception takes the error payload Gradio
 sends, which carries a `title` for a `gr.Error` alone, so the harness records
-which fields arrived (see [refusals.py](src/refusals.py)). A `gr.Error` raised
-inside the GPU call passes through ZeroGPU with its title, so it passes this
-check as well, although the GPU was reserved for it. Where a check sits only
-the code can show.
+which fields arrived (see [refusals.py](src/endpoint/refusals.py)). A
+`gr.Error` raised inside the GPU call passes through ZeroGPU with its title,
+so it passes this check as well, although the GPU was reserved for it. Where a
+check sits only the code can show.
 
 Cases expecting an error run after the other cases of a model, so that a worker
 still loading after a restart answers a real request first, rather than holding
@@ -972,9 +989,11 @@ second entry.
 
 ## CI Behavior
 
-- **Schedule:** daily at 04:45 UTC. It can also be run manually from the
-  Actions tab, with options to validate specific spaces, skip inference, or
-  disable the default restart of crashed spaces.
+- **Schedule:** daily at 04:45 UTC, started by
+  [model_validation_schedule.yml](../.github/workflows/model_validation_schedule.yml).
+  The workflow can also be run manually from the Actions tab, with options to
+  validate specific spaces, skip inference, or disable the default restart of
+  crashed spaces.
 - **Lint:** a third job lints every space, or the ones named, alongside the
   other two. It takes a few minutes and spends no allowance, and its report is
   a separate artifact.
@@ -993,13 +1012,13 @@ second entry.
 - **Harness tests:** the examples job first runs the unit tests under
   `tests/`, which also check config.yml, so a configuration mistake turns the
   run red before any model runs.
-- **Failure signal:** model failures keep the run green, because deployments
-  are not yet stable enough for daily failure emails to be useful. They show
-  up as warning annotations and in the run summary and report instead. No
-  issues are opened and no emails are sent. Only infrastructure errors, such
-  as a bad token or a discovery failure, turn the run red, since those mean
-  validation itself has stopped working.
-- **Opting back into notifications later:** remove the exit-code handling in
-  the two `Validate` steps and the `Lint spaces` step of the workflow so that
-  exit code 1 propagates. Failed runs then turn red and GitHub emails
-  maintainers.
+- **Failure signal:** a failing model turns its job, and with it the run, red.
+  So does an infrastructure error, such as a bad token or a discovery failure,
+  which means validation itself has stopped working. The run summary and the
+  report say which it was. No issues are opened.
+- **Notifications:** GitHub emails the failures of a scheduled workflow to
+  whoever last edited its schedule, on every run until the failure is fixed.
+  The daily run is therefore started by a second workflow, which holds the
+  schedule and does nothing else. A run started that way belongs to the GitHub
+  Actions bot, so a failure shows in the Actions tab and emails no one. A run
+  started by hand notifies whoever started it.

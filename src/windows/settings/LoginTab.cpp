@@ -7,11 +7,13 @@ ProviderPage::ProviderPage(Provider p) : provider(p)
 
     titleLabel.setText("Update or remove your API key for " + getDisplayName() + ".",
                        dontSendNotification);
-    titleLabel.setJustificationType(Justification::centred);
+    titleLabel.setFont(ModelStyle::font(14.0f));
+    titleLabel.setJustificationType(Justification::centredLeft);
 
     getTokenLink.setButtonText("Click here to register a new API key.");
     getTokenLink.setURL(client->tokenRegistrationURL);
-    getTokenLink.setColour(HyperlinkButton::textColourId, Colours::blue);
+    getTokenLink.setFont(ModelStyle::font(14.0f), false, Justification::centredLeft);
+    getTokenLink.setColour(HyperlinkButton::textColourId, ModelStyle::accent);
 
     addAndMakeVisible(titleLabel);
     addAndMakeVisible(getTokenLink);
@@ -42,7 +44,9 @@ ProviderPage::ProviderPage(Provider p) : provider(p)
     addAndMakeVisible(updateButton);
     addAndMakeVisible(removeButton);
 
-    statusLabel.setJustificationType(Justification::centred);
+    statusLabel.setFont(ModelStyle::font(14.0f));
+    statusLabel.setColour(Label::textColourId, ModelStyle::secondaryText);
+    statusLabel.setJustificationType(Justification::centredLeft);
 
     addAndMakeVisible(statusLabel);
 
@@ -71,7 +75,6 @@ void ProviderPage::resized()
     FlexBox buttonsArea;
     buttonsArea.flexDirection = FlexBox::Direction::row;
 
-    buttonsArea.items.add(FlexItem().withFlex(1.0)); // Filler space
     buttonsArea.items.add(FlexItem(updateButton).withWidth(buttonWidth));
     buttonsArea.items.add(FlexItem().withWidth(gapSize)); // Filler space
     buttonsArea.items.add(FlexItem(removeButton).withWidth(buttonWidth));
@@ -86,7 +89,7 @@ void ProviderPage::resized()
 
     pageArea.items.add(FlexItem(getTokenLink).withHeight(rowHeight).withMargin(marginSize));
 
-    pageArea.performLayout(getLocalBounds());
+    pageArea.performLayout(getLocalBounds().reduced(pagePadding));
 }
 
 void ProviderPage::resetState()
@@ -264,6 +267,11 @@ LoginTab::LoginTab()
     sidebar.setModel(this);
     sidebar.setRowHeight(36);
     sidebar.setOutlineThickness(0);
+    // Set apart from the page beside it, as the tab bar is from a tab
+    sidebar.setColour(
+        ListBox::backgroundColourId,
+        getUIColourIfAvailable(LookAndFeel_V4::ColourScheme::UIColour::windowBackground)
+            .darker(0.25f));
     addAndMakeVisible(sidebar);
 
     loginPages.addPage(std::make_unique<ProviderPage>(Provider::HuggingFace));
@@ -303,7 +311,7 @@ void LoginTab::resized()
 {
     Rectangle<int> area = getLocalBounds();
 
-    sidebar.setBounds(area.removeFromLeft(100));
+    sidebar.setBounds(area.removeFromLeft(sidebarWidth));
 
     loginPages.setBounds(area);
 }
@@ -314,12 +322,13 @@ void LoginTab::paintListBoxItem(int rowNumber,
                                 int height,
                                 bool rowIsSelected)
 {
+    // The accent used for whatever is selected on the Home tab and model tabs
     if (rowIsSelected)
     {
-        g.fillAll(Colours::darkgrey.withAlpha(0.4f));
+        g.fillAll(ModelStyle::accentDark);
     }
 
-    g.setColour(Colours::white);
-    g.setFont(14.0f);
+    g.setColour(rowIsSelected ? Colours::white : Colours::lightgrey);
+    g.setFont(ModelStyle::font(14.0f, rowIsSelected));
     g.drawText(loginPages.getNameForIndex(rowNumber), 0, 0, width, height, Justification::centred);
 }

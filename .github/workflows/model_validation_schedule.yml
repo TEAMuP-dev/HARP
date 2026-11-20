@@ -1,0 +1,26 @@
+# Starts the daily run of model_validation.yml.
+#
+# That workflow fails whenever a model does, and GitHub emails the failures of a scheduled
+# workflow to whoever last edited its schedule, every day until the model is fixed. A run this
+# workflow starts belongs to the GitHub Actions bot instead, so it turns red in the Actions tab
+# without anyone being emailed. This workflow itself only fails if the run could not be started.
+
+name: Model Validation (Schedule)
+
+on:
+  schedule:
+    - cron: '45 4 * * *'   # daily, 04:45 UTC
+
+permissions:
+  actions: write
+
+jobs:
+  start:
+    name: Start model validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Start the Model Validation workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run model_validation.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME"

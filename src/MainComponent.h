@@ -1,7 +1,7 @@
 /**
  * @file MainComponent.h
  * @brief Top-level component containing all HARP GUI elements and state.
- * @author cwitkowitz, saumya-pailwan, xribene, hugofloresgarcia
+ * @author TEAMuP
  */
 
 #pragma once
@@ -82,6 +82,8 @@ public:
     void resized() override;
 
     void updateWindowConstraints();
+    // Grows or shrinks the window by the size of a panel that was just shown or hidden
+    void resizeWindowForPanel(int deltaWidth, int deltaHeight);
     int getRequiredMainPanelWidth() const { return requiredMainPanelWidth; }
     int getVisibleClipboardWidth();
 

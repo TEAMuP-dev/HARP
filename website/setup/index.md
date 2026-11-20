@@ -1,3 +1,7 @@
+---
+description: Set up HARP as a standalone editor or beside a DAW, as its external sample editor or by exchanging files.
+---
+
 # Setting Up HARP
 
 HARP runs as a [standalone](/setup/standalone) editor, or beside a DAW. A DAW works with HARP
@@ -23,8 +27,8 @@ and the page for each uses its own term.
 2. **Process it.** Open a model, drag the DAW-linked track onto its input track, and select
    `Process`.
 3. **Send the result back.** Drag the output track into the media clipboard, select it, and select
-   the send icon. Choose the DAW-linked track to replace, then select `Overwrite`. HARP writes the
-   result over the file of the clip, converting it to the format of that file.
+   the send icon. Choose the DAW-linked track to replace, then select `Overwrite`. HARP backs up
+   the file behind the clip, then writes the result over it in the format of that file.
 4. **Return to the DAW**, which picks up the changed file.
 
 ![Sending a result back to the DAW from the media clipboard](/images/send-to-daw.png)
@@ -41,7 +45,7 @@ A DAW without an external editor setting exchanges files with HARP instead:
 
 ## Protecting the Original
 
-::: danger
+::: warning
 <!--@include: @/../README.md#warning-->
 :::
 

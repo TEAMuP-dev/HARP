@@ -1,7 +1,7 @@
 /**
  * @file OutputLabelComponent.h
  * @brief Label components for media display.
- * @author cwitkowitz, nathanpruyne, xribene
+ * @author TEAMuP
  */
 
 #pragma once

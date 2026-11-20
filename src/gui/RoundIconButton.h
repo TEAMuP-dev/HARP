@@ -2,7 +2,7 @@
  * @file RoundIconButton.h
  * @brief Small round buttons drawn from strokes, for closing, removing, or minimizing
  *        whatever they sit on.
- * @author cwitkowitz, 2cylu2
+ * @author TEAMuP
  */
 
 #pragma once

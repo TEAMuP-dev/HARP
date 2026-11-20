@@ -8,7 +8,7 @@ outputs today, so every one of those passes it. This tier reads each Space's
 files from the Hub instead, without starting it, so it spends no ZeroGPU
 allowance and wakes nothing.
 
-Each finding names the rule it breaks (RULES in lint_base.py), and a rule is an
+Each finding names the rule it breaks (RULES in rules/base.py), and a rule is an
 error or a warning. An error is a rule DEPLOYMENT.md states that the Space
 breaks, and it fails the Space. A warning is a risk the guide leaves to
 judgment, such as a requirement left unpinned, and is reported without failing
@@ -16,8 +16,8 @@ anything. A Space that breaks a rule for a reason records the exception in
 config.yml under its `lint_exceptions`, with the reason, and an exception no
 longer needed is reported in turn.
 
-The rules on the app file live in lint_app.py and those on what the Space
-installs in lint_requirements.py. This module reads a Space, runs both, and
+The rules on the app file live in rules/app.py and those on what the Space
+installs in rules/requirements.py. This module reads a Space, runs both, and
 applies its exceptions.
 """
 
@@ -25,16 +25,16 @@ import re
 import time
 from pathlib import Path
 
-from lint_app import LocalModules, lint_app, lint_containers, lint_downloads, lint_revisions
-from lint_base import ERROR, RULES, Finding, SpaceFiles
-from lint_requirements import (
+from results import PASS, ModelResult
+from rules.app import LocalModules, lint_app, lint_containers, lint_downloads, lint_revisions
+from rules.base import ERROR, RULES, Finding, SpaceFiles
+from rules.requirements import (
     find_python_file,
     find_uv,
     read_dockerfile,
     read_requirements,
     requirement_findings,
 )
-from results import PASS, ModelResult
 from utils import describe_exception
 
 
@@ -190,6 +190,9 @@ def lint_space(api, space_id: str, overrides: dict, uv: str | None):
             result.status = PASS
     except Exception as exc:  # noqa: BLE001 - reported as the Space's failure
         result.error = f"could not read the Space: {describe_exception(exc)}"
+        # The Hub answers alike for a Space that is private and one that does not exist
+        if not api.token:
+            result.error += " | Set HF_TOKEN if the Space is private"
     finally:
         result.duration = round(time.time() - start, 1)
 

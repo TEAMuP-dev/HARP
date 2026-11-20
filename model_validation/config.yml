@@ -1270,13 +1270,19 @@ overrides:
             min_duration: 8.0
 
   teamup-tech/MIDI-Synthesizer:
-    # A copy of pyharp's midi_synthesizer example, kept the same.
+    # A copy of pyharp's midi_synthesizer example, kept the same. Its soundfont
+    # input is optional, so only a case that supplies one reaches that code.
     test_cases:
       - name: default
         expect:
           "Synthesized Audio":
             min_duration: 15.0
             min_rms_db: -45
+
+      - name: refuses-unreadable-soundfont
+        files:
+          "Soundfont": test_data/unreadable.sf2
+        expect_error: "soundfont"
 
   teamup-tech/MIDI-VAE:
     # Reconstruction skips the style swap, and each style pair loads its own

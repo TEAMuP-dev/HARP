@@ -5,26 +5,29 @@ HARP model validation - command-line entry point.
 Parses the options, runs one of the three tiers, and writes the reports:
 
 1. Spaces (default): every Space under an organization, validated concurrently
-   by spaces.py. Requires a Hugging Face token, read only from the HF_TOKEN
-   environment variable so it never appears in argv or in the repository.
+   by tiers/spaces.py. Requires a Hugging Face token, read only from the
+   HF_TOKEN environment variable so it never appears in argv or in the
+   repository.
 
 2. Examples (--local-examples): the pyharp example apps, launched locally and
-   validated one at a time by examples.py. Needs no token, and exercises
+   validated one at a time by tiers/examples.py. Needs no token, and exercises
    pyharp itself with no Hugging Face infrastructure in the loop.
 
 3. Lint (--lint): every Space's files, read from the Hub and checked against
-   docs/DEPLOYMENT.md by lint.py, without running anything. Needs the token to
-   read them, and uv to resolve their requirements.
+   docs/DEPLOYMENT.md by tiers/lint.py, without running anything. Needs uv to
+   resolve their requirements, and the token unless the Spaces are named and
+   public.
 
-The first two run the same checks, from harness.py. Which models to validate
-and what to assert about their outputs is configured in config.yml. README.md
-is the guide to writing that.
+The first two run the same checks, from endpoint/harness.py. Which models to
+validate and what to assert about their outputs is configured in config.yml.
+README.md is the guide to writing that.
 
 Usage:
     HF_TOKEN=... python model_validation/src/validate_models.py
     HF_TOKEN=... python model_validation/src/validate_models.py --spaces pitch_shifter
     HF_TOKEN=... python model_validation/src/validate_models.py --skip-zerogpu
     HF_TOKEN=... python model_validation/src/validate_models.py --lint
+    python model_validation/src/validate_models.py --lint --spaces <owner>/<name>
     python model_validation/src/validate_models.py --local-examples pitch_shifter
 
 Exit codes:
@@ -41,12 +44,12 @@ import threading
 import time
 from pathlib import Path
 
-from assets import Assets, check_synthesized_inputs
-from examples import test_local_example
-from lint import ERROR, check_lint_exceptions, find_uv, lint_space
+from media.assets import Assets, check_synthesized_inputs
 from quota import ZeroGPUTracker
 from results import FAIL, status_emoji, write_reports
-from spaces import test_space
+from tiers.examples import test_local_example
+from tiers.lint import ERROR, check_lint_exceptions, find_uv, lint_space
+from tiers.spaces import test_space
 from utils import (
     Exclusions,
     check_config_keys,
@@ -381,6 +384,24 @@ def select_spaces(api, opts: argparse.Namespace, config: dict, exclusions: Exclu
     return space_ids
 
 
+def space_owners(opts: argparse.Namespace) -> list:
+    """
+    The organizations and accounts whose Spaces a spaces or lint run touches.
+
+    Args:
+        opts (argparse.Namespace): Parsed command-line options.
+
+    Returns:
+        owners (list): The owners of the Spaces named, or else the organization
+            whose Spaces are found.
+    """
+
+    if opts.spaces:
+        return sorted({qualify(s, opts.org).split("/")[0] for s in opts.spaces})
+
+    return [opts.org]
+
+
 def validate_lint(
     opts: argparse.Namespace, config: dict, exclusions: Exclusions, token: str
 ) -> list:
@@ -391,7 +412,8 @@ def validate_lint(
         opts (argparse.Namespace): Parsed command-line options.
         config (dict): Parsed configuration.
         exclusions (Exclusions): Models to exclude.
-        token (str): Hugging Face access token.
+        token (str): Hugging Face access token, or an empty string to read
+            public Spaces without one.
 
     Returns:
         results (list): ModelResult objects, or None when the run cannot
@@ -410,7 +432,8 @@ def validate_lint(
         return None
 
     overrides = config.get("overrides", {})
-    api = HfApi(token=token)
+    # False asks for no token at all, where None would fall back to a saved login
+    api = HfApi(token=token or False)
     space_ids = select_spaces(api, opts, config, exclusions)
 
     if not space_ids:
@@ -558,11 +581,19 @@ def main() -> int:
         token = ""
         results = validate_examples(opts, config, exclusions, assets)
     else:
-        token = get_token(required=True)
+        # The lint only reads, and anyone can read a public Space, so a lint of
+        # named Spaces goes ahead without a token. A run that finds its Spaces
+        # needs one, since the private Spaces of the organization would
+        # otherwise be left out in silence.
+        token = get_token(required=not (opts.lint and opts.spaces))
+
+        if not token:
+            print("HF_TOKEN is not set, so only public Spaces can be read.")
         # Checked once here rather than discovered one failing space at a time.
         # The lint only reads, so it never needs to restart anything.
-        if not check_token(token, opts.org, opts.restart_failed and not opts.lint):
+        elif not check_token(token, space_owners(opts), opts.restart_failed and not opts.lint):
             return 2
+
         results = (
             validate_lint(opts, config, exclusions, token)
             if opts.lint

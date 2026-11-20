@@ -1,7 +1,7 @@
 /**
  * @file PreviewPaneWidget.h
  * @brief Pane at the bottom of the media clipboard for previewing the selected file.
- * @author NatalieElizabeth
+ * @author TEAMuP
  */
 
 #pragma once

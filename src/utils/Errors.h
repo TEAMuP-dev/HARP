@@ -1,7 +1,7 @@
 /**
  * @file Errors.h
  * @brief Classes and helper functions for error handling.
- * @author cwitkowitz, xribene
+ * @author TEAMuP
  */
 
 #pragma once

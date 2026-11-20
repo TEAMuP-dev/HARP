@@ -2,8 +2,8 @@
 The lint of the app file of a Space against the structural rules of
 docs/DEPLOYMENT.md, by reading its syntax tree rather than running it: where
 the model is loaded, what the GPU function does, where the interface is built,
-and what the components and the launch declare. lint.py puts these findings
-beside those of lint_requirements.py.
+and what the components and the launch declare. tiers/lint.py puts these
+findings beside those of rules/requirements.py.
 """
 
 import ast
@@ -11,10 +11,10 @@ import re
 import sys
 from pathlib import Path
 
-from lint_base import Finding
+from rules.base import Finding
 
 
-__all__ = ["LocalModules", "lint_app", "lint_containers", "lint_revisions"]
+__all__ = ["LocalModules", "lint_app", "lint_containers", "lint_downloads", "lint_revisions"]
 
 
 # Calls that load a model or fetch its weights. The final name is enough for

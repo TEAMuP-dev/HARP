@@ -1,7 +1,7 @@
 /**
  * @file Model.h
  * @brief Model state and interface for loading and processing.
- * @author cwitkowitz, saumya-pailwan, xribene, hugofloresgarcia, aldo-aguilar
+ * @author TEAMuP
  */
 
 #pragma once

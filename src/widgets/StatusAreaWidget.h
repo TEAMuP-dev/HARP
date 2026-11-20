@@ -1,7 +1,7 @@
 /**
  * @file StatusAreaWidget.h
  * @brief Defines shared resources and components for instructions and status.
- * @author cwitkowitz, saumya-pailwan, xribene
+ * @author TEAMuP
  */
 
 #pragma once

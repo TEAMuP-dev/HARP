@@ -132,14 +132,15 @@ is a reference, shown here in full:
 }
 ```
 
-- **`card`** follows the `ModelCard` of PyHARP. Write the tags out in full, `input:` and `output:` tags
+- **`card`** follows PyHARP's `ModelCard`. Write the tags out in full, `input:` and `output:` tags
   included, since nothing infers them here. The description should say that the model needs a key,
   and what each request costs.
 - **`inputs`** and **`outputs`** list components in order, each with a `type`: `audio_track`,
   `midi_track`, `generic_file`, `slider`, `number_box`, `text_box`, `toggle`, or `dropdown` for an
   input, and a track or `json` for an output. The fields of each type are those of the matching
-  class in the [`core.py`](https://github.com/TEAMuP-dev/pyharp/blob/main/pyharp/core.py)
-  of PyHARP, _e.g._, `HarpSlider`.
+  class in PyHARP's
+  [`core.py`](https://github.com/TEAMuP-dev/pyharp/blob/main/pyharp/core.py), _e.g._,
+  `HarpSlider`.
 
 Put the files under `src/clients/providers/<name>/models/`, and embed them with a `juce_add_binary_data`
 target of their own in [`CMakeLists.txt`](https://github.com/TEAMuP-dev/HARP/blob/main/CMakeLists.txt),

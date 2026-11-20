@@ -1,7 +1,7 @@
 /**
  * @file FileDisplayComponent.h
  * @brief Media display for a generic file track (neither audio nor MIDI).
- * @author cwitkowitz, derekllanes
+ * @author TEAMuP
  */
 
 #pragma once

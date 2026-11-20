@@ -1,7 +1,8 @@
 """
 The lint of what a Space installs: its requirement files, or for a Docker Space
 whatever its Dockerfile installs, and whether they resolve the way its build
-would install them. lint.py puts these findings beside those of lint_app.py.
+would install them. tiers/lint.py puts these findings beside those of
+rules/app.py.
 """
 
 import dataclasses
@@ -15,7 +16,7 @@ from pathlib import Path
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 
-from lint_base import Finding, SpaceFiles
+from rules.base import Finding, SpaceFiles
 
 
 __all__ = [

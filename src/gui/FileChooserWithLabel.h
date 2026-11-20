@@ -1,7 +1,7 @@
 /**
  * @file FileChooserWithLabel.h
  * @brief Custom file chooser component with label.
- * @author cwitkowitz, derekllanes
+ * @author TEAMuP
  */
 
 #pragma once

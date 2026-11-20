@@ -1,7 +1,7 @@
 /**
  * @file Providers.h
  * @brief Identifies the services HARP can reach models through.
- * @author cwitkowitz
+ * @author TEAMuP
  */
 
 #pragma once

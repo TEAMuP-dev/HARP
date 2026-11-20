@@ -1,44 +1,77 @@
+---
+description: Build a PyHARP app from scratch around S-KEY, which detects the key of a song and shows it as a label over the audio in HARP.
+---
+
 # Example 1: Key Detection
 
-This example walks through the app behind our
-[S-KEY](https://huggingface.co/spaces/teamup-tech/S-KEY) model, which finds the key of a piece of
-music and marks it over the audio in HARP. The model is small enough to run on any CPU in seconds,
-which leaves the steps every deployment shares in plain view: describing the model, loading it once,
-processing a request, and declaring the interface.
+This example builds a PyHARP app from scratch around [S-KEY](https://github.com/deezer/skey), a
+model that finds the key of a piece of music, and marks that key over the audio in HARP. The model
+is small enough to run on any CPU in seconds, which leaves the steps every deployment shares in
+plain view: describing the model, loading it once, processing a request, and declaring the
+interface.
 
-The code shown is the deployed app, at revision
-[`10274b3`](https://huggingface.co/spaces/teamup-tech/S-KEY/tree/10274b3ecff836b60521c5cc4d53fb9501df898f).
+The app you end up with is the one behind our
+[S-KEY](https://huggingface.co/spaces/teamup-tech/S-KEY) model. Each block of code below is the
+next part of its `app.py`, as deployed at revision
+[`10274b3`](https://huggingface.co/spaces/teamup-tech/S-KEY/tree/10274b3ecff836b60521c5cc4d53fb9501df898f),
+so you can compare your file with ours at any point.
 
-## 1. Get the Code
+::: tip
+This app follows our [deployment guidelines](/pyharp/guidelines), against which we check every
+model we host. The steps below link the sections that apply.
+:::
 
-Download the Space at that revision into a folder of its own, and install its requirements in an
-environment there:
+## 1. Set Up the Project
+
+Create a folder for the app, with a Python environment of its own:
 
 ```bash
 mkdir s-key && cd s-key
 python3 -m venv .venv
 source .venv/bin/activate        # On Windows: .venv\Scripts\activate
-pip install huggingface_hub
-hf download teamup-tech/S-KEY --repo-type space --local-dir . \
-    --revision 10274b3ecff836b60521c5cc4d53fb9501df898f
+```
+
+S-KEY is not on PyPI, so the app carries a copy of the code its authors published, and calls that
+code rather than reimplementing it. Clone their repository at the commit this example uses, and
+copy the `skey` package and its license into the folder:
+
+```bash
+git clone https://github.com/deezer/skey.git upstream
+git -C upstream checkout 80d9590e150b836a341dfc6dbf05aa20bc81d10b
+cp -r upstream/skey upstream/LICENSE .
+```
+
+The `skey` package holds the inference code and a checkpoint of 765 KB, under the MIT license.
+Copying what inference needs, rather than a whole research repository, keeps a Space small and
+quick to start, as [Lightweight Spaces](/pyharp/guidelines#lightweight-spaces) describes.
+
+Next, list what the app installs in a file named `requirements.txt`:
+
+```
+torch==2.13.0
+torchaudio==2.11.0
+torchcodec==0.17.0
+einops==0.8.2
+nnAudio==0.3.4
+git+https://github.com/TEAMuP-dev/pyharp.git@v0.4.2
+spaces>=0.51.1
+```
+
+Each package is pinned to one version, and PyHARP to a release tag, so that the app keeps
+installing what it was tested with (see
+[Versions and Compatibility](/pyharp/guidelines#versions-and-compatibility)). The exception is
+`spaces`, the package through which an app uses ZeroGPU, which sets a minimum. Install the list:
+
+```bash
 pip install -r requirements.txt
 ```
 
-The Space holds:
-
-- `app.py`, the PyHARP app.
-- `requirements.txt`, the packages the app needs, each pinned to one version except `spaces`, which
-  sets a minimum.
-- `skey/`, the inference code of the authors and its checkpoint of 765 KB, under their MIT
-  license (`LICENSE`).
-- `README.md`, the configuration of the Space (see [Hosting Models](/hosting/spaces)).
-
-Copying the code that inference needs, rather than a whole research repository, keeps a Space small
-and quick to start, as
-[Lightweight Spaces](https://github.com/TEAMuP-dev/HARP/blob/main/docs/DEPLOYMENT.md#lightweight-spaces)
-describes.
+Last, create an empty file named `app.py` beside `requirements.txt`. Each step below adds the next
+part of it.
 
 ## 2. Describe the Model
+
+Begin `app.py` with its imports and the model card:
 
 ```python
 import spaces
@@ -73,9 +106,11 @@ model_card = ModelCard(
   lists the model under `Analysis` on the Home tab. `SampleRate` and `Channels` declare the format
   in which the model works, which nothing can infer, `'domain:music'` is a custom tag naming the
   domain of the model, and the `input:` and `output:` tags are added for you, from the components
-  in step 5.
+  in step 5. [Model Card](/pyharp/guidelines#model-card) covers what each field should say.
 
 ## 3. Load the Model Once
+
+Next, load the model:
 
 ```python
 # Key detection fails on less audio than this (2.9 s fails, 3 s works)
@@ -89,11 +124,15 @@ if __name__ != "__main__":
     HCQT, CHROMANET, CROP_FN = load_model_components(CHECKPOINT, torch.device(DEVICE))
 ```
 
-PyHARP runs `process_fn` in a worker process, which imports `app.py` under the name `__mp_main__`.
-This condition loads the checkpoint and builds the model in the worker alone, once, as the app
-starts. The server process, which never runs `process_fn`, skips it.
+PyHARP runs `process_fn` in a worker process, so that the `Cancel` button in HARP can stop a job.
+The worker imports `app.py` under the name `__mp_main__`. This condition loads the checkpoint and
+builds the model in the worker alone, once, as the app starts. The server process, which never runs
+`process_fn`, skips it. [Worker Processes](/pyharp/guidelines#worker-processes) covers what the
+worker changes for an app.
 
 ## 4. Process a Request
+
+Add the function that handles a request, and the one that runs the model for it:
 
 ```python
 # Define the process function
@@ -142,7 +181,8 @@ def find_key(input_audio_path):
 ```
 
 - **`process_fn` checks the input first**, and raises `gr.Error` with a message the user can act
-  on, which HARP shows in its error popup.
+  on, which HARP shows in its error popup (see
+  [Error Reporting](/pyharp/guidelines#error-reporting)).
 - **`find_key` runs the model.** `@spaces.GPU` reserves a GPU for it on ZeroGPU, after the checks in
   `process_fn` have passed, and does nothing elsewhere.
 - **The result is a label.** A `LabelList` holds one `AudioLabel`, which spans the clip (`t` and
@@ -151,6 +191,8 @@ def find_key(input_audio_path):
   audio as the track that carries the label.
 
 ## 5. Declare the Interface
+
+End `app.py` with the components and the line that starts the app:
 
 ```python
 # Build Gradio Endpoint
@@ -186,8 +228,14 @@ if __name__ == "__main__":
   HARP must fill, and `.set_info(...)` describes a component in HARP's instructions panel.
 - **`demo.queue()`** lets HARP cancel a job, and **`show_error=True`** forwards the reason a job
   failed.
+- **`ssr_mode=False`** turns off the server-side rendering of the Gradio page, which HARP does not
+  use, and which can crash a Space as it starts.
+  [Structure of app.py](/pyharp/guidelines#structure-of-apppy) lists everything HARP requires of
+  the components and of this line.
 
 ## 6. Run It in HARP
+
+The app is complete. Start it from its folder:
 
 ```bash
 python app.py
@@ -199,7 +247,7 @@ seconds onto `Input Audio`, and select `Process`. The key appears as a label ove
 
 ![The key of a song, shown as a label by S-KEY in HARP](/images/skey-in-harp.png)
 
-To deploy a model of your own from this app, replace the `skey` package and the body of `find_key`
-with your own inference code, and change the model card and components to match.
+A model of your own takes the same steps: your inference code in place of the `skey` package and
+of the body of `find_key`, and a model card and components to match.
 
 **Next:** [Example 2: Stem Separation](/pyharp/example_demucs).

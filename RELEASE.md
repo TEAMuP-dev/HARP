@@ -1,66 +1,55 @@
-## v4.0.0
+## v4.1.0
 ### Overview
-- HARP 4.0.0 replaces the model dropdown with a browsable catalog, opens each model in a tab of
-  its own, adds a preview pane to the media clipboard, and reports errors far more precisely.
+- HARP 4.1.0 is a maintenance release. It fixes settings that were not remembered, backs up the
+  file that Send to DAW overwrites, gives the Settings, About, and tutorial windows the look of the
+  main window, and keeps settings and logs in the standard place on Linux.
 
-### Major Features
-- **Home Tab and Model Catalog**:
-  - Every Space of the [TEAMuP organization](https://huggingface.co/teamup-tech) is listed on the
-    Home tab, grouped by category and searchable by name, task, tag, or path.
-  - Cards show the description, tags, license, and deployment (e.g., ZeroGPU, sleeping) of each
-    model. Spaces that cannot currently load are hidden, with the reason given on hover.
-  - The listing is cached, so the Home tab populates at once and still works offline.
-  - Custom paths (Spaces, Gradio URLs, or local addresses) are kept as cards until removed.
-  - A Space entered as `user/name`, by its page URL, or by its `hf.space` address is loaded and
-    listed as one model, with or without a trailing slash.
-- **Model Tabs**:
-  - Each model opens in a tab of its own, and several can be open at once.
-  - The card of a loaded model is shown at the top of its tab.
-- **Media Clipboard**:
-  - The clipboard is shared by every tab, so the output of a model in one tab can be the input
-    of a model in another.
-  - A preview pane beneath the list plays the selected track.
-  - Tracks can be reordered by dragging, and renamed by double-clicking their names. The
-    clipboard and its preview pane can be resized.
-  - Send to DAW converts audio to the format of the file it replaces.
-- **Controls and Tracks**:
-  - New controls for number boxes, multiselect dropdowns, and generic file inputs.
-  - Generic file outputs, for models that return something other than audio or MIDI.
-  - Optional inputs are marked as such.
-  - A time axis on every track, and a pause button beside play and stop.
-  - Zooming behaves the same for files of any length, and reaches down to a tenth of a second.
-  - Output tracks can be copied for pasting into a DAW or a file browser.
-  - Drum notes are drawn distinctly in MIDI tracks.
-- **Error Reporting**:
-  - Errors say what went wrong and what to do about it, distinguishing, e.g., a sleeping Space
-    from a broken one, and GPU quota from a runtime error (on Gradio 6.13 or newer).
-  - Besides the page of the model and the log, error popups can open the API key settings or a
-    prefilled GitHub issue.
-  - API keys are kept out of logs, and are only sent to Hugging Face and the local machine.
+### Fixes
+- **Settings**: The panels shown in the `View` menu and the choice to skip the welcome tutorial are
+  remembered between sessions. HARP 4.0.0 could read a setting that was saved as on as off.
+- **Window Size**: Hiding the status area or the media clipboard and showing it again no longer
+  leaves the window larger than it was.
+- **Window Position**: The window is saved together with its frame, so on Linux it no longer
+  reopens lower by the height of its title bar each time.
+- **Custom Paths**: The prompt for a custom path is shown inside the window. As a window of its
+  own it could open empty on Linux. A local address with a path and without `http://`, such as
+  `localhost:7860/demo`, is no longer mistaken for a Space.
+- **MIDI Playback**: Notes that are sounding continue when the playback position is moved, where
+  clicking in a track used to silence them. Scrolling with Cmd and Shift held moves a piano roll
+  through pitch on macOS, as it does with Ctrl and Shift elsewhere.
+- **Launching with Files**: A file passed at launch is imported once, however the system delivers
+  it.
+- **Stability**: Fixed a crash when a model answered with a list where HARP expected an object.
 
-### Other Improvements
-- **Cancellation**: Canceling stops only the job it was meant for, even when several clients
-  share a Space, and no longer blocks the interface.
-- **Stability**: Fixed crashes and hangs when closing tabs or quitting during a request, when
-  loading MIDI files without notes, and when receiving unrecognized labels.
-- **Performance**: All tracks share one audio device, and text is measured once rather than on
-  every repaint.
-- **Window Sizing**: Minimum window sizes are now enforced on Linux, and each tab scrolls when the
-  window is too small for its contents.
-- **Status Area**: Status messages are kept in a history that can be scrolled back.
-- **Tutorial**: The tutorial covers the Home tab and model tabs.
-- **JUCE 8**: HARP is built on JUCE 8.0.12, up from 7.0.5, which fixes launching, resizing, drag
-  and drop, and file dialogs on Wayland desktops, e.g., Ubuntu 26.04.
-- **Builds**: macOS builds are universal binaries for Apple silicon and Intel, and Linux builds
-  are available for arm64 as well as x64. Windows builds link the Visual C++ runtime statically,
-  so `HARP.exe` needs no DLLs beside it, and building on Windows no longer depends on where
-  Visual Studio is installed.
-- **Documentation**: The website, now at [harp.tools](https://harp.tools/), has setup guides for
-  standalone use and for REAPER, Logic Pro, Pro Tools, Ableton Live, Cubase, Audacity, FL Studio,
-  and Adobe Audition, and a guide to deploying models with PyHARP.
-- **Model Validation**: A harness under `model_validation/` checks every Space of the TEAMuP
-  organization daily, through the same calls HARP makes, including the refusal of unreadable and
-  empty inputs.
+### Improvements
+- **Send to DAW**: HARP copies the file it is about to overwrite to a `HARP Backups` folder in the
+  system temporary folder, and names the copy in the status area. A result of more than 16 bits
+  keeps 24 bits when it is converted to the format of the file it replaces.
+- **Tracks**: An input track refuses a dropped file while its model is processing, and a label too
+  long for its place ends with an ellipsis. The instructions of a MIDI track explain the colors of
+  notes and the bar that shows velocity.
+- **Model Tabs**: A tab opened from a custom path takes the name of its model once loaded. Error
+  popups offer to report an issue only for models listed on the Home tab.
+- **Settings, About, and Tutorial**: The three windows share the fonts, colors, and spacing of the
+  main window. The About window links the third-party notices, which are now part of the
+  repository.
+- **Logging**: Everything is logged to one file, `main.log`, with the time on each line and the
+  version and operating system at the start of each session.
+- **Linux**: The settings, the cached list of models, and the log are kept in `~/.config/HARP/`.
+  Files from `~/HARP/`, where 4.0.0 kept them, are moved on the first launch.
+
+### Documentation and Deployment
+- **Website**: The deployment guidelines are published on [harp.tools](https://harp.tools/), the
+  two PyHARP examples build their apps from scratch, the download page covers uninstalling, and
+  the demo files are listed with their sources.
+- **Checking a Deployment**: The validation harness checks a model under any account, and its
+  file checks run on a public Space without a token. The deployment guidelines end with the
+  commands.
+- **Model Validation**: A failing model now fails the daily run, and the harness also checks that a
+  Space turns off server-side rendering and downloads its weights whole.
+- **PyHARP**: The MIDI synthesizer example takes an optional soundfont.
+- **Formatting**: The C++ and Python of the repository are formatted with pinned versions of
+  clang-format and ruff, which a workflow checks on every push.
 
 ### Requirements
 - Supports models deployed with [`pyharp` **v0.4.2**](https://github.com/TEAMuP-dev/pyharp/releases/tag/v0.4.2) and `gradio` **v6.13** or newer.
