@@ -89,5 +89,9 @@ remove its settings and its log as well:
   instead, and later versions move them to `~/.config/HARP/`.
 
 API keys are stored in the settings file, so deleting it removes them. Results are downloaded to
-the temporary directory of the system. A DAW that was set up to open HARP as its external editor
-keeps that setting until it is changed in the DAW.
+the temporary directory of the system, where `Send to DAW` also keeps its backups in a
+`HARP Backups` folder. On Windows and Linux that directory is shared with other programs (`%TEMP%`
+and `/tmp`). On macOS it is `~/Library/Caches/HARP/`, which can be deleted as well. HARP also
+leaves an empty lock file named `juceAppLock_HARP`, in `~/Library/Caches/com.juce.locks/` on macOS
+and in `/var/tmp/` on Linux. A DAW that was set up to open HARP as its external editor keeps that
+setting until it is changed in the DAW.
