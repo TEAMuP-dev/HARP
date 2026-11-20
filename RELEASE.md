@@ -7,16 +7,16 @@
 ### Fixes
 - **Settings**: The panels shown in the `View` menu and the choice to skip the welcome tutorial are
   remembered between sessions. HARP 4.0.0 could read a setting that was saved as on as off.
-- **Window Size**: Hiding and showing the status area or the media clipboard no longer changes the
-  size of the window.
+- **Window Size**: Hiding the status area or the media clipboard and showing it again no longer
+  leaves the window larger than it was.
 - **Window Position**: The window is saved together with its frame, so on Linux it no longer
   reopens lower by the height of its title bar each time.
 - **Custom Paths**: The prompt for a custom path is shown inside the window. As a window of its
   own it could open empty on Linux. A local address with a path and without `http://`, such as
   `localhost:7860/demo`, is no longer mistaken for a Space.
 - **MIDI Playback**: Notes that are sounding continue when the playback position is moved, where
-  clicking in a track used to silence them. Holding Shift scrolls a piano roll through pitch on
-  macOS as it does elsewhere.
+  clicking in a track used to silence them. Scrolling with Cmd and Shift held moves a piano roll
+  through pitch on macOS, as it does with Ctrl and Shift elsewhere.
 - **Launching with Files**: A file passed at launch is imported once, however the system delivers
   it.
 - **Stability**: Fixed a crash when a model answered with a list where HARP expected an object.
